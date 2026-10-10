@@ -3,6 +3,7 @@
 // Complete relational datasets, Auto-Numbering, Auto-Documentation,
 // Cloud Backup, and Criminal/Lawyer/Hearing/Punishment/Law state engine.
 // ============================================================================
+import { supabase } from './supabase'
 
 export type PunishmentType =
   | 'CAPITAL'
@@ -230,343 +231,8 @@ export interface FullCaseRecord {
 // INITIAL SEED DATA
 // ============================================================================
 
-export const INITIAL_CRIMINALS: CriminalRecord[] = [
-  {
-    id: 'crim-01',
-    crimId: 'CRIM-2024-8819',
-    name: 'Rahul Verma',
-    aliases: ['"Rocky"', '"RDX"', '"Rahul Shooter"'],
-    age: 37,
-    dob: '1989-04-12',
-    gender: 'Male',
-    biometricHash: 'A982-F199-00B2-114A',
-    recidivismScore: 0.82,
-    activeCaseNumber: 'DL-CR-2026-PSCT-00481',
-    activeCaseId: 'dl-cr-2026-00481',
-    custodyStatus: 'In custody',
-    address: 'Plot 44, Gali No. 8, Seelampur, Delhi 110053',
-    photoPlaceholder: 'RV',
-    crimes: [
-      {
-        date: '2018-02-11',
-        firCourt: 'FIR 44/2018 · PS Kotwali · Tis Hazari Courts',
-        charges: ['Sec. 379 IPC (Theft)', 'Sec. 411 IPC (Dishonestly receiving stolen property)'],
-        verdict: 'CONVICTED',
-        sentence: '18 Months Rigorous Imprisonment + Rs. 5,000 fine',
-        notes: 'Recovered two stolen motorbikes. Served full sentence at Tihar Jail.',
-      },
-      {
-        date: '2021-06-20',
-        firCourt: 'FIR 102/2021 · PS Sadar Bazar · Sessions Court 03',
-        charges: ['Sec. 392 IPC (Armed Robbery)', 'Arms Act Sec. 25'],
-        verdict: 'CONVICTED',
-        sentence: '3 Years Rigorous Imprisonment',
-        notes: 'Armed holdup of cash merchant in Chandni Chowk. Released on parole in late 2023.',
-      },
-      {
-        date: '2024-11-04',
-        firCourt: 'FIR 219/2024 · PS Cyber Thana · Patiala House',
-        charges: ['Sec. 307 IPC (Attempted Murder)', 'Sec. 34 IPC'],
-        verdict: 'UNDER_TRIAL',
-        sentence: 'Remanded in Judicial Custody',
-        notes: 'Shootout during intercepted getaway near DND Flyway.',
-      },
-      {
-        date: '2026-01-10',
-        firCourt: 'FIR 12/2026 · PS Cyber Thana · Principal Sessions Bench 04',
-        charges: ['BNS s.103 (Murder)', 'BNS s.309(4) (Robbery)', 'Arms Act s.25'],
-        verdict: 'UNDER_TRIAL',
-        sentence: 'Current active trial before this bench',
-        notes: 'Co-accused identified in CCTV footage and ballistic match.',
-      },
-    ],
-  },
-  {
-    id: 'crim-02',
-    crimId: 'CRIM-2022-1102',
-    name: 'Ramesh Kumar',
-    aliases: ['"Kutty"', '"Ramesh Anna"'],
-    age: 34,
-    dob: '1992-08-19',
-    gender: 'Male',
-    biometricHash: 'C471-9921-A810-775E',
-    recidivismScore: 0.65,
-    activeCaseNumber: 'S.C. 214/2025',
-    activeCaseId: 'sc-214-2025',
-    custodyStatus: 'In custody',
-    address: '12, Periyar Street, Koyambedu, Chennai 600107',
-    photoPlaceholder: 'RK',
-    crimes: [
-      {
-        date: '2020-04-15',
-        firCourt: 'FIR 88/2020 · PS Ambattur · Metropolitan Magistrate Egmore',
-        charges: ['Sec. 380 IPC (Theft in dwelling house)'],
-        verdict: 'CONVICTED',
-        sentence: '1 Year Simple Imprisonment',
-        notes: 'Plea bargaining accepted. Sentence served.',
-      },
-      {
-        date: '2025-02-04',
-        firCourt: 'FIR 118/2025 · PS Anna Nagar · Principal Sessions Chennai',
-        charges: ['BNS s.309(4) (Robbery with deadly weapon)', 'Arms Act s.25'],
-        verdict: 'UNDER_TRIAL',
-        sentence: 'Judicial Custody (Remand pending)',
-        notes: 'Recovered country pistol near Koyambedu flyover on s.27 disclosure.',
-      },
-    ],
-  },
-  {
-    id: 'crim-03',
-    crimId: 'CRIM-2025-0412',
-    name: 'Dinesh Babu',
-    aliases: ['"Dinu"', '"Babu White"'],
-    age: 29,
-    dob: '1997-01-30',
-    gender: 'Male',
-    biometricHash: 'F110-3882-B902-8871',
-    recidivismScore: 0.28,
-    activeCaseNumber: 'S.C. 214/2025',
-    activeCaseId: 'sc-214-2025',
-    custodyStatus: 'On bail',
-    address: '4/18, Gandhi Nagar, Villivakkam, Chennai 600049',
-    photoPlaceholder: 'DB',
-    crimes: [
-      {
-        date: '2025-02-04',
-        firCourt: 'FIR 118/2025 · PS Anna Nagar · Principal Sessions Chennai',
-        charges: ['BNS s.309(4) Robbery', 'Arms Act s.25'],
-        verdict: 'UNDER_TRIAL',
-        sentence: 'Enlarged on bail (weekly reporting condition)',
-        notes: 'CDR places device within 200m of jewellery store.',
-      },
-    ],
-  },
-  {
-    id: 'crim-04',
-    crimId: 'CRIM-2023-7401',
-    name: 'Arun Selvam',
-    aliases: ['"Arun Hosur"', '"Speed Arun"'],
-    age: 31,
-    dob: '1995-11-03',
-    gender: 'Male',
-    biometricHash: 'D892-1200-5491-CC43',
-    recidivismScore: 0.78,
-    activeCaseNumber: 'S.C. 214/2025',
-    activeCaseId: 'sc-214-2025',
-    custodyStatus: 'Absconding',
-    address: 'Bagalur Road, Hosur 635109 (Last known)',
-    photoPlaceholder: 'AS',
-    crimes: [
-      {
-        date: '2019-11-02',
-        firCourt: 'FIR 204/2019 · PS Hosur Town · Sessions Court Krishnagiri',
-        charges: ['Sec. 324 IPC (Hurt by dangerous weapon)', 'Sec. 506 IPC'],
-        verdict: 'CONVICTED',
-        sentence: '2 Years Rigorous Imprisonment',
-      },
-      {
-        date: '2025-02-04',
-        firCourt: 'FIR 118/2025 · PS Anna Nagar · Principal Sessions Chennai',
-        charges: ['BNS s.309(4) Robbery', 'BNS s.3(5) Common Intention'],
-        verdict: 'UNDER_TRIAL',
-        sentence: 'Non-Bailable Warrant issued; declared absconder',
-      },
-    ],
-  },
-  {
-    id: 'crim-05',
-    crimId: 'CRIM-2024-9120',
-    name: 'T. Anbazhagan',
-    aliases: ['"Teacher Anbu"'],
-    age: 44,
-    dob: '1982-05-14',
-    gender: 'Male',
-    biometricHash: 'E331-5011-8974-9921',
-    recidivismScore: 0.45,
-    activeCaseNumber: 'Spl.S.C. (POCSO) 38/2025',
-    activeCaseId: 'pocso-38-2025',
-    custodyStatus: 'In custody',
-    address: '22, North Veli Street, Madurai 625001',
-    photoPlaceholder: 'TA',
-    crimes: [
-      {
-        date: '2025-06-11',
-        firCourt: 'FIR 41/2025 · AWPS Madurai · Special POCSO Court',
-        charges: ['POCSO Act s.6 & s.10', 'BNS s.65(2)'],
-        verdict: 'UNDER_TRIAL',
-        sentence: 'Judicial custody; bail dismissed twice',
-      },
-    ],
-  },
-  {
-    id: 'crim-06',
-    crimId: 'CRIM-2025-3391',
-    name: 'Vikram Malhotra',
-    aliases: ['"Vicky Syndicate"', '"Seth Ji"'],
-    age: 41,
-    dob: '1985-07-28',
-    gender: 'Male',
-    biometricHash: 'B201-9874-3321-4412',
-    recidivismScore: 0.92,
-    activeCaseNumber: 'DL-CR-2024-00219',
-    activeCaseId: 'dl-cr-2024-00219',
-    custodyStatus: 'In custody',
-    address: 'Flat 102, Shivalik Enclave, New Delhi 110017',
-    photoPlaceholder: 'VM',
-    crimes: [
-      {
-        date: '2016-03-12',
-        firCourt: 'FIR 61/2016 · PS Civil Lines · Sessions Court Delhi',
-        charges: ['Arms Act Sec. 25', 'Sec. 386 IPC (Extortion by putting in fear of death)'],
-        verdict: 'CONVICTED',
-        sentence: '4 Years Rigorous Imprisonment',
-      },
-      {
-        date: '2021-08-04',
-        firCourt: 'FIR 190/2021 · PS Connaught Place · Patiala House',
-        charges: ['Sec. 420 IPC (Cheating)', 'Sec. 467 IPC (Forgery of valuable security)'],
-        verdict: 'CONVICTED',
-        sentence: '3 Years Rigorous Imprisonment + Rs. 2,00,000 fine',
-      },
-      {
-        date: '2024-09-18',
-        firCourt: 'FIR 312/2024 · PS Cyber Thana · Bench 04',
-        charges: ['BNS s.318 (Cheating)', 'BNS s.61 (Criminal Conspiracy)'],
-        verdict: 'UNDER_TRIAL',
-        sentence: 'Active trial proceeding before Bench 04',
-      },
-    ],
-  },
-]
-
-export const INITIAL_LAWYERS: LawyerRecord[] = [
-  {
-    id: 'law-01',
-    barNumber: 'D/1482/2004',
-    name: 'Adv. Rajesh Khanna',
-    chapter: 'Bar Council of Delhi',
-    enrolmentYear: 2004,
-    standingYears: 22,
-    activeCasesCount: 7,
-    isParticipatingInBench: true,
-    clearanceStatus: 'VERIFIED',
-    phone: '+91-98112-44102',
-    email: 'r.khanna.adv@delhibar.org',
-    chamber: 'Chamber 412, Tis Hazari Complex, Delhi',
-  },
-  {
-    id: 'law-02',
-    barNumber: 'MS/1182/2004',
-    name: 'Adv. P. Lakshmi',
-    chapter: 'Bar Council of Tamil Nadu & Puducherry',
-    enrolmentYear: 2004,
-    standingYears: 22,
-    activeCasesCount: 14,
-    isParticipatingInBench: true,
-    clearanceStatus: 'VERIFIED',
-    phone: '+91-94441-20911',
-    email: 'p.lakshmi.spp@tngov.in',
-    chamber: 'Chamber 18, City Civil Court Buildings, Chennai',
-  },
-  {
-    id: 'law-03',
-    barNumber: 'MS/3340/2011',
-    name: 'Adv. V. Karthikeyan',
-    chapter: 'Bar Council of Tamil Nadu & Puducherry',
-    enrolmentYear: 2011,
-    standingYears: 15,
-    activeCasesCount: 9,
-    isParticipatingInBench: true,
-    clearanceStatus: 'VERIFIED',
-    phone: '+91-98402-88190',
-    email: 'karthik.v.law@gmail.com',
-    chamber: 'Chamber 104, Madras High Court Advocates Association, Chennai',
-  },
-  {
-    id: 'law-04',
-    barNumber: 'MS/2201/2008',
-    name: 'Adv. S. Revathi',
-    chapter: 'Bar Council of Tamil Nadu & Puducherry',
-    enrolmentYear: 2008,
-    standingYears: 18,
-    activeCasesCount: 8,
-    isParticipatingInBench: true,
-    clearanceStatus: 'VERIFIED',
-    phone: '+91-98410-63201',
-    email: 'revathi.spp.pocso@gov.in',
-    chamber: 'Special Prosecutor Office, Madurai District Court',
-  },
-  {
-    id: 'law-05',
-    barNumber: 'MS/4417/2014',
-    name: 'Adv. M. Gnanasekar',
-    chapter: 'Bar Council of Tamil Nadu & Puducherry',
-    enrolmentYear: 2014,
-    standingYears: 12,
-    activeCasesCount: 5,
-    isParticipatingInBench: true,
-    clearanceStatus: 'VERIFIED',
-    phone: '+91-99401-11234',
-    email: 'gnanasekar.adv@yahoo.co.in',
-    chamber: 'Chamber 82, Madurai Bar Association',
-  },
-  {
-    id: 'law-06',
-    barNumber: 'D/2190/2005',
-    name: 'Adv. Priya Sharma',
-    chapter: 'Bar Council of Delhi',
-    enrolmentYear: 2005,
-    standingYears: 21,
-    activeCasesCount: 11,
-    isParticipatingInBench: true,
-    clearanceStatus: 'VERIFIED',
-    phone: '+91-98101-77219',
-    email: 'priya.sharma@defenselaw.in',
-    chamber: 'Chamber 309, Patiala House Courts, New Delhi',
-  },
-  {
-    id: 'law-07',
-    barNumber: 'D/0092/1991',
-    name: 'Adv. Sundaram Iyer (Sr. Adv.)',
-    chapter: 'Supreme Court Bar Association',
-    enrolmentYear: 1991,
-    standingYears: 35,
-    activeCasesCount: 4,
-    isParticipatingInBench: true,
-    clearanceStatus: 'VERIFIED',
-    phone: '+91-98100-00122',
-    email: 'sundaram.iyer.sr@jurist.org',
-    chamber: 'A-12, Sector 15A, Noida & SCBA Library 1',
-  },
-  {
-    id: 'law-08',
-    barNumber: 'D/3301/2018',
-    name: 'Adv. Arun Mohanty',
-    chapter: 'Bar Council of Delhi',
-    enrolmentYear: 2018,
-    standingYears: 8,
-    activeCasesCount: 2,
-    isParticipatingInBench: false,
-    clearanceStatus: 'PROVISIONAL',
-    phone: '+91-97110-82910',
-    email: 'arun.mohanty.law@gmail.com',
-    chamber: 'Chamber 51, Rohini District Courts, Delhi',
-  },
-  {
-    id: 'law-09',
-    barNumber: 'MS/9812/2019',
-    name: 'Adv. N. Fathima',
-    chapter: 'Bar Council of Tamil Nadu & Puducherry',
-    enrolmentYear: 2019,
-    standingYears: 7,
-    activeCasesCount: 6,
-    isParticipatingInBench: true,
-    clearanceStatus: 'VERIFIED',
-    phone: '+91-94420-77192',
-    email: 'fathima.dlsa.panel@gov.in',
-    chamber: 'District Legal Services Authority, Madurai',
-  },
-]
+export const INITIAL_CRIMINALS: CriminalRecord[] = []
+export const INITIAL_LAWYERS: LawyerRecord[] = []
 
 export const INITIAL_STATUTORY_LAWS: StatutoryLaw[] = [
   {
@@ -689,651 +355,64 @@ export const INITIAL_STATUTORY_LAWS: StatutoryLaw[] = [
   },
 ]
 
-export const INITIAL_PUNISHMENTS: PunishmentRecord[] = [
-  {
-    id: 'pnh-01',
-    caseId: 'sc-198-2024',
-    caseNumber: 'S.C. 198/2024',
-    caseTitle: 'State v. Murugesan & Anr.',
-    convictName: 'Murugesan (CRIM-2021-0912)',
-    crimId: 'CRIM-2021-0912',
-    judge: 'Hon. Justice R. Venkataraman',
-    type: 'LIFE_IMPRISONMENT',
-    durationMonths: 240,
-    fineAmountInr: 25000,
-    pronouncementDate: '2026-04-14',
-    operativeText: 'The convict is sentenced to undergo Imprisonment for Life under Section 302 IPC and to pay a fine of Rs. 25,000, in default of payment to undergo further rigorous imprisonment for 6 months.',
-  },
-  {
-    id: 'pnh-02',
-    caseId: 'sc-112-2024',
-    caseNumber: 'S.C. 112/2024',
-    caseTitle: 'State v. K. Rajendran',
-    convictName: 'K. Rajendran (CRIM-2020-4109)',
-    crimId: 'CRIM-2020-4109',
-    judge: 'Hon. Justice R. Venkataraman',
-    type: 'RIGOROUS_IMPRISONMENT',
-    durationMonths: 84, // 7 years
-    fineAmountInr: 15000,
-    pronouncementDate: '2026-06-22',
-    operativeText: 'Convicted under Section 392 IPC read with Section 397 IPC. Sentenced to 7 years rigorous imprisonment.',
-  },
-  {
-    id: 'pnh-03',
-    caseId: 'sc-081-2025',
-    caseNumber: 'S.C. 81/2025',
-    caseTitle: 'State v. Selva Kumar',
-    convictName: 'Selva Kumar (CRIM-2023-1120)',
-    crimId: 'CRIM-2023-1120',
-    judge: 'Hon. Justice R. Venkataraman',
-    type: 'RIGOROUS_IMPRISONMENT',
-    durationMonths: 36, // 3 years
-    fineAmountInr: 5000,
-    pronouncementDate: '2026-08-10',
-    operativeText: 'Sentenced to 3 years rigorous imprisonment for voluntary causing grievous hurt by dangerous weapons.',
-  },
-  {
-    id: 'pnh-04',
-    caseId: 'sc-045-2025',
-    caseNumber: 'S.C. 45/2025',
-    caseTitle: 'State v. Govindaraj',
-    convictName: 'Govindaraj (CRIM-2022-7712)',
-    crimId: 'CRIM-2022-7712',
-    judge: 'Hon. Justice R. Venkataraman',
-    type: 'SIMPLE_IMPRISONMENT',
-    durationMonths: 12,
-    fineAmountInr: 2000,
-    pronouncementDate: '2026-09-05',
-    operativeText: 'Convicted under Section 323 IPC. Sentenced to 1 year simple imprisonment with set-off under Section 428 CrPC.',
-  },
-  {
-    id: 'pnh-05',
-    caseId: 'sc-009-2026',
-    caseNumber: 'S.C. 09/2026',
-    caseTitle: 'State v. T. Balaji',
-    convictName: 'T. Balaji (CRIM-2025-0019)',
-    crimId: 'CRIM-2025-0019',
-    judge: 'Hon. Justice R. Venkataraman',
-    type: 'PENAL_FINE',
-    durationMonths: 0,
-    fineAmountInr: 50000,
-    pronouncementDate: '2026-10-02',
-    operativeText: 'Compounded matter under Section 320 CrPC upon payment of compensation and penal fine of Rs. 50,000 to victim relief fund.',
-  },
-  {
-    id: 'pnh-06',
-    caseId: 'sc-014-2026',
-    caseNumber: 'S.C. 14/2026',
-    caseTitle: 'State v. S. Manikandan',
-    convictName: 'S. Manikandan (CRIM-2024-5501)',
-    crimId: 'CRIM-2024-5501',
-    judge: 'Hon. Justice R. Venkataraman',
-    type: 'PROBATION',
-    durationMonths: 12,
-    fineAmountInr: 10000,
-    pronouncementDate: '2026-10-07',
-    operativeText: 'First-time young offender released on Probation of Good Conduct under Section 4 of Probation of Offenders Act for 1 year upon executing bond of Rs. 10,000.',
-  },
-]
-
-export const INITIAL_DOCUMENTS: DocumentRecord[] = [
-  {
-    id: 'doc-01',
-    caseId: 'sc-214-2025',
-    caseNumber: 'S.C. 214/2025',
-    canonicalName: 'DOC-POLICE-FIR-118-2025',
-    originalFileName: 'FIR_118_2025.pdf',
-    submittingParty: 'POLICE_INVESTIGATION',
-    advocateOrOfficer: 'Insp. S. Murugan (T-4 Anna Nagar)',
-    submissionDate: '2025-02-04',
-    fileSize: '412 KB',
-    pages: 3,
-    kind: 'FIR',
-    sha256: '9a3b8c1d5e2f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b',
-    ocrExcerpt: 'First Information Report under Section 173 BNSS. Informant K. Sundaram states three persons armed with firearm barged into jewellery shop at 18:30 hrs...',
-  },
-  {
-    id: 'doc-02',
-    caseId: 'sc-214-2025',
-    caseNumber: 'S.C. 214/2025',
-    canonicalName: 'DOC-POLICE-FINAL-CHARGESHEET-CS99',
-    originalFileName: 'Chargesheet.pdf',
-    submittingParty: 'POLICE_INVESTIGATION',
-    advocateOrOfficer: 'Insp. S. Murugan',
-    submissionDate: '2025-05-02',
-    fileSize: '5.2 MB',
-    pages: 64,
-    kind: 'Chargesheet',
-    sha256: '7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c',
-    ocrExcerpt: 'Final Police Report under Section 193 BNSS. Accused Ramesh Kumar, Dinesh Babu and Arun Selvam charge-sheeted under Sections 309(4) and 3(5) BNS...',
-  },
-  {
-    id: 'doc-03',
-    caseId: 'sc-214-2025',
-    caseNumber: 'S.C. 214/2025',
-    canonicalName: 'DOC-DEFENSE-BAIL-APPLICATION-A2',
-    originalFileName: 'Bail_Petition_A2.pdf',
-    submittingParty: 'DEFENSE_ADVOCATE',
-    advocateOrOfficer: 'Adv. V. Karthikeyan (Bar MS/3340/2011)',
-    submissionDate: '2025-07-02',
-    fileSize: '890 KB',
-    pages: 12,
-    kind: 'Bail Petition',
-    sha256: '1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a',
-    ocrExcerpt: 'Application under Section 480 BNSS for grant of regular bail to Accused 2 Dinesh Babu. Accused has deep roots in society, no antecedent, willing to surrender passport...',
-  },
-  {
-    id: 'doc-04',
-    caseId: 'sc-214-2025',
-    caseNumber: 'S.C. 214/2025',
-    canonicalName: 'DOC-PROSECUTION-CCTV-EVIDENTIARY-EXTRACT',
-    originalFileName: 'CCTV_Transcript.pdf',
-    submittingParty: 'PUBLIC_PROSECUTOR',
-    advocateOrOfficer: 'Adv. P. Lakshmi (Special PP)',
-    submissionDate: '2025-03-21',
-    fileSize: '690 KB',
-    pages: 4,
-    kind: 'Forensic Evidence Transcript',
-    sha256: '3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e',
-    ocrExcerpt: 'Transcript of CCTV footage camera 02. Frame 18:42:01 shows three males wearing caps entering front shutter...',
-  },
-  {
-    id: 'doc-05',
-    caseId: 'pocso-38-2025',
-    caseNumber: 'Spl.S.C. (POCSO) 38/2025',
-    canonicalName: 'DOC-POLICE-POCSO-CHARGESHEET-CR41',
-    originalFileName: 'Chargesheet_POCSO.pdf',
-    submittingParty: 'POLICE_INVESTIGATION',
-    advocateOrOfficer: 'Dy.SP Kavitha Rajan (AWPS Madurai)',
-    submissionDate: '2025-09-08',
-    fileSize: '4.4 MB',
-    pages: 48,
-    kind: 'Chargesheet',
-    sha256: 'e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6',
-    ocrExcerpt: 'Final report under Section 193 BNSS in Crime 41/2025. Accused T. Anbazhagan booked under POCSO Sections 6 and 10...',
-  },
-  {
-    id: 'doc-06',
-    caseId: 'pocso-38-2025',
-    caseNumber: 'Spl.S.C. (POCSO) 38/2025',
-    canonicalName: 'DOC-DEFENSE-DISCHARGE-PLEA-A1',
-    originalFileName: 'Discharge_Application_POCSO.pdf',
-    submittingParty: 'DEFENSE_ADVOCATE',
-    advocateOrOfficer: 'Adv. M. Gnanasekar (Bar MS/4417/2014)',
-    submissionDate: '2025-11-20',
-    fileSize: '1.2 MB',
-    pages: 15,
-    kind: 'Plea of Discharge',
-    sha256: '5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e',
-    ocrExcerpt: 'Petition under Section 250 BNSS seeking discharge of accused on ground of contradictory birth certificate records...',
-  },
-  {
-    id: 'doc-07',
-    caseId: 'dl-cr-2026-00481',
-    caseNumber: 'DL-CR-2026-PSCT-00481',
-    canonicalName: 'DOC-POLICE-FIR-12-2026-CYBER-THANA',
-    originalFileName: 'FIR_12_2026.pdf',
-    submittingParty: 'POLICE_INVESTIGATION',
-    advocateOrOfficer: 'Insp. Vikram Singh (Badge #7741)',
-    submissionDate: '2026-01-10',
-    fileSize: '620 KB',
-    pages: 5,
-    kind: 'FIR',
-    sha256: '8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b',
-    ocrExcerpt: 'FIR registered on complaint of deceased victim brother. Accused Rahul Verma and co-accused charged with firearm homicide...',
-  },
-]
-
-export const INITIAL_HEARINGS: HearingRecord[] = [
-  {
-    id: 'hrg-01',
-    caseId: 'sc-214-2025',
-    caseNumber: 'S.C. 214/2025',
-    caseTitle: 'State v. Ramesh Kumar & 2 Ors.',
-    date: '2026-10-12',
-    time: '10:30',
-    stage: 'Remand Production & FSL Direction',
-    courtHall: 'Hall 04 (Main Sessions)',
-    judge: 'Hon. Justice R. Venkataraman',
-    benchNotes: 'Accused 1 produced via video conference from Central Prison. Remand extended by 14 days.',
-    hasAlarm: true,
-    alarmUrgency: 'WARNING',
-  },
-  {
-    id: 'hrg-02',
-    caseId: 'pocso-38-2025',
-    caseNumber: 'Spl.S.C. (POCSO) 38/2025',
-    caseTitle: 'State v. T. Anbazhagan',
-    date: '2026-10-12',
-    time: '11:45',
-    stage: 'Victim Evidence (In-Camera Preparation)',
-    courtHall: 'Hall 02 (Child Friendly Room)',
-    judge: 'Hon. Justice R. Venkataraman',
-    benchNotes: 'DLSA support person present. Screen barrier positioned.',
-    hasAlarm: true,
-    alarmUrgency: 'STATUTORY_CRITICAL',
-  },
-  {
-    id: 'hrg-03',
-    caseId: 'dl-cr-2026-00481',
-    caseNumber: 'DL-CR-2026-PSCT-00481',
-    caseTitle: 'State (NCT of Delhi) v. Rahul Verma & 2 Ors.',
-    date: '2026-10-12',
-    time: '14:00',
-    stage: 'Cross Examination of Lead IO',
-    courtHall: 'Hall 04 (Main Sessions)',
-    judge: 'Hon. Justice R. Venkataraman',
-    benchNotes: 'Defense counsel Adv. Priya Sharma conducting cross on recovery memo.',
-    hasAlarm: false,
-  },
-  {
-    id: 'hrg-04',
-    caseId: 'sc-214-2025',
-    caseNumber: 'S.C. 214/2025',
-    caseTitle: 'State v. Ramesh Kumar & 2 Ors.',
-    date: '2026-10-15',
-    time: '10:30',
-    stage: 'Charge Framing Hearing',
-    courtHall: 'Hall 04',
-    judge: 'Hon. Justice R. Venkataraman',
-    hasAlarm: true,
-    alarmUrgency: 'WARNING',
-  },
-  {
-    id: 'hrg-05',
-    caseId: 'pocso-38-2025',
-    caseNumber: 'Spl.S.C. (POCSO) 38/2025',
-    caseTitle: 'State v. T. Anbazhagan',
-    date: '2026-10-14',
-    time: '11:00',
-    stage: 'Victim Deposition (In-Camera)',
-    courtHall: 'Hall 02',
-    judge: 'Hon. Justice R. Venkataraman',
-    hasAlarm: true,
-    alarmUrgency: 'STATUTORY_CRITICAL',
-  },
-  {
-    id: 'hrg-06',
-    caseId: 'dl-cr-2026-00481',
-    caseNumber: 'DL-CR-2026-PSCT-00481',
-    caseTitle: 'State (NCT of Delhi) v. Rahul Verma & 2 Ors.',
-    date: '2026-10-21',
-    time: '14:30',
-    stage: 'Final Arguments',
-    courtHall: 'Hall 04',
-    judge: 'Hon. Justice R. Venkataraman',
-    hasAlarm: true,
-    alarmUrgency: 'INFO',
-  },
-  {
-    id: 'hrg-07',
-    caseId: 'sc-198-2024',
-    caseNumber: 'S.C. 198/2024',
-    caseTitle: 'State v. Murugesan & Anr.',
-    date: '2026-10-23',
-    time: '15:00',
-    stage: 'Review Compliance Report',
-    courtHall: 'Hall 04',
-    judge: 'Hon. Justice R. Venkataraman',
-    hasAlarm: false,
-  },
-  {
-    id: 'hrg-08',
-    caseId: 'sc-214-2025',
-    caseNumber: 'S.C. 214/2025',
-    caseTitle: 'State v. Ramesh Kumar & 2 Ors.',
-    date: '2026-10-28',
-    time: '11:15',
-    stage: 'Prosecution Witness PW-1 Examination',
-    courtHall: 'Hall 04',
-    judge: 'Hon. Justice R. Venkataraman',
-    hasAlarm: true,
-    alarmUrgency: 'INFO',
-  },
-]
-
-export const INITIAL_ALARMS: AlarmRecord[] = [
-  {
-    id: 'alm-01',
-    hearingId: 'hrg-02',
-    caseId: 'pocso-38-2025',
-    caseNumber: 'Spl.S.C. (POCSO) 38/2025',
-    title: 'Statutory Limitation Lapse: In-Camera Victim Evidence Overdue',
-    triggerTime: '2026-10-12 11:45',
-    urgency: 'STATUTORY_CRITICAL',
-    message: 'Under POCSO Act Sec. 35(1), victim deposition must be completed within 30 days of cognizance. 34 days elapsed. Expedite closed-room session.',
-    isAcknowledged: false,
-    isDismissed: false,
-    createdAt: '2026-10-10 09:00',
-  },
-  {
-    id: 'alm-02',
-    hearingId: 'hrg-01',
-    caseId: 'sc-214-2025',
-    caseNumber: 'S.C. 214/2025',
-    title: 'Remand Expiration Alarm: Accused 1 Ramesh Kumar',
-    triggerTime: '2026-10-12 10:30',
-    urgency: 'WARNING',
-    message: '14-day statutory remand expires today. Production memo required before 13:00 hrs to avoid default bail vulnerability.',
-    isAcknowledged: false,
-    isDismissed: false,
-    createdAt: '2026-10-11 08:30',
-  },
-  {
-    id: 'alm-03',
-    hearingId: 'hrg-04',
-    caseId: 'sc-214-2025',
-    caseNumber: 'S.C. 214/2025',
-    title: 'FSL Ballistics Report Overdue Notice (22 Days)',
-    triggerTime: '2026-10-15 10:00',
-    urgency: 'WARNING',
-    message: 'Court directed FSL Chennai to submit pistol ballistic match by 20 Sep 2026. Summons to Chemical Examiner pending.',
-    isAcknowledged: true,
-    isDismissed: false,
-    createdAt: '2026-10-09 14:15',
-  },
-]
-
-export const INITIAL_CASES: FullCaseRecord[] = [
-  {
-    id: 'sc-214-2025',
-    number: 'S.C. 214/2025',
-    title: 'State of Tamil Nadu v. Ramesh Kumar & 2 Ors.',
-    type: 'Criminal',
-    court: 'Principal Sessions Court, Chennai · Bench 04',
-    acts: ['BNS s.309(4)', 'BNS s.3(5)', 'Arms Act s.25'],
-    stage: 'Charge Framing & FSL Awaited',
-    status: 'warning',
-    filingDate: '2025-05-02',
-    nextHearing: '15 Oct 2026',
-    judge: 'Hon. Justice R. Venkataraman',
-    policeStation: 'T-4 Anna Nagar Police Station, Chennai',
-    fir: { no: '118/2025', date: '04 Feb 2025' },
-    io: {
-      name: 'Insp. S. Murugan',
-      rank: 'Inspector of Police (Law & Order)',
-      badge: 'TN-POL-4412',
-      policeStation: 'T-4 Anna Nagar PS',
-      phone: '+91-98401-22901',
-      chargesheetRef: 'CS-118/2025 filed 02 May 2025',
-    },
-    parties: [
-      { role: 'Prosecutor', name: 'Adv. P. Lakshmi (Special PP)', lawyerBar: 'MS/1182/2004' },
-      { role: 'Complainant / Offended Party', name: 'K. Sundaram (Proprietor, Meenakshi Jewellers)' },
-      { role: 'Accused', name: 'Ramesh Kumar (Alias "Kutty")', crimId: 'CRIM-2022-1102', lawyerBar: 'MS/3340/2011', custody: 'In custody' },
-      { role: 'Accused', name: 'Dinesh Babu (Alias "Dinu")', crimId: 'CRIM-2025-0412', lawyerBar: 'MS/3340/2011', custody: 'On bail' },
-      { role: 'Accused', name: 'Arun Selvam (Alias "Arun Hosur")', crimId: 'CRIM-2023-7401', custody: 'Absconding' },
-      { role: 'Key Witness', name: 'R. Devi (Shop Assistant / PW-2)' },
-    ],
-    victims: {
-      total: 1,
-      minors: 0,
-      adults: 1,
-      details: [
-        { name: 'K. Sundaram', masked: false, age: 58, relationship: 'Store Owner & Victim of Armed Assault' },
-      ],
-    },
-    weapons: [
-      {
-        id: 'wpn-01',
-        type: 'FIREARM',
-        makeModel: 'Country-made 9mm semi-automatic pistol',
-        serialNumber: 'Defaced / Ground off (Lab Tag WPN-441)',
-        recoveryMemo: 'Seizure Mahazar under Sec. 27 Evidence Act dated 09 Feb 2025',
-        recoveryDate: '2025-02-09',
-        recoveryPlace: 'Shrubbery near Koyambedu flyover pillar #14, Chennai',
-        ballisticStatus: 'PENDING_FSL',
-        notes: 'Chambered for .315 / 9mm rounds. FSL report 22 days overdue. Summons issued to Forensic Director.',
-      },
-      {
-        id: 'wpn-02',
-        type: 'FIREARM',
-        makeModel: 'Two live rounds (.315 bore lead core ammunition)',
-        serialNumber: 'Ammunition Lot KF-19',
-        recoveryMemo: 'Recovered along with weapon wpn-01 under same seizure memo',
-        recoveryDate: '2025-02-09',
-        recoveryPlace: 'Koyambedu, Chennai',
-        ballisticStatus: 'PENDING_FSL',
-        notes: 'Cartridges intact; primer unmarked.',
-      },
-    ],
-    evidence: [
-      {
-        id: 'ev-01',
-        code: 'EX-P-1',
-        kind: 'Digital',
-        title: 'CCTV DVR extract and certified transcript',
-        detail: 'DVR extract of 2 min 14 sec from camera 02 showing 3 persons entering jewellery store at 18:42 hrs.',
-        custodyOfficer: 'Insp. S. Murugan',
-        date: '2025-02-05',
-        place: 'Meenakshi Jewellers, Anna Nagar',
-        labStatus: 'received',
-        admission: 'admitted',
-        chainHash: '8f2a9c1b4e6d7a8f9b0c',
-        notes: 'CFSL Hyderabad confirms no digital tampering. Certificate under Section 63 BSA appended.',
-      },
-      {
-        id: 'ev-02',
-        code: 'EX-P-2',
-        kind: 'Ballistic',
-        title: 'Country-made pistol (.315 / 9mm)',
-        detail: 'Recovered on disclosure statement of Accused 1 Ramesh Kumar near Koyambedu flyover.',
-        custodyOfficer: 'Insp. S. Murugan',
-        date: '2025-02-09',
-        place: 'Malkhana, T-4 Anna Nagar PS',
-        labStatus: 'pending',
-        admission: 'marked',
-        chainHash: '4e91a03f8c2b5d6e7f1a',
-        notes: 'FSL report awaited from Forensic Science Department, Chennai.',
-      },
-      {
-        id: 'ev-03',
-        code: 'EX-P-3',
-        kind: 'Forensic',
-        title: 'Latent fingerprints lifted from glass display counter',
-        detail: 'Three latent prints lifted by Scene of Crime Officers (SOCO) team.',
-        custodyOfficer: 'SI V. Anand',
-        date: '2025-02-04',
-        place: 'Fingerprint Bureau, Egmore',
-        labStatus: 'pending',
-        admission: 'marked',
-        chainHash: '7b6a5d4c3e2f1a0b9c8d',
-        notes: 'Custody gap flagged: 3-day holding by SOCO without malkhana register entry.',
-      },
-    ],
-    documents: [],
-    hearings: [],
-    additionalDetails: 'Chargesheet filed within 83 days of arrest. Defense has filed application for discharge regarding absence of independent witnesses during recovery.',
-    isClosed: false,
-  },
-  {
-    id: 'pocso-38-2025',
-    number: 'Spl.S.C. (POCSO) 38/2025',
-    title: 'State of Tamil Nadu v. T. Anbazhagan',
-    type: 'POCSO',
-    court: 'Special Court for POCSO Act Cases, Madurai · Bench 02',
-    acts: ['POCSO Act s.6', 'POCSO Act s.10', 'BNS s.65(2)'],
-    stage: 'Victim Evidence (In-Camera Overdue)',
-    status: 'overdue',
-    filingDate: '2025-09-08',
-    nextHearing: '14 Oct 2026',
-    judge: 'Hon. Justice R. Venkataraman',
-    policeStation: 'All Women Police Station, Madurai City',
-    fir: { no: '41/2025', date: '11 Jun 2025' },
-    io: {
-      name: 'Dy.SP Kavitha Rajan',
-      rank: 'Deputy Superintendent of Police (AWPS)',
-      badge: 'TN-POL-8109',
-      policeStation: 'AWPS Madurai',
-      phone: '+91-98421-99810',
-      chargesheetRef: 'CS-POCSO-41/2025 filed 08 Sep 2025',
-    },
-    parties: [
-      { role: 'Prosecutor', name: 'Adv. S. Revathi (Special Public Prosecutor)', lawyerBar: 'MS/2201/2008' },
-      { role: 'Complainant / Offended Party', name: 'Parent of Minor Victim (Identity Protected under Sec 23 POCSO)', masked: true },
-      { role: 'Victim', name: 'Minor Victim (Age 13 years · Identity Withheld)', masked: true },
-      { role: 'Accused', name: 'T. Anbazhagan', crimId: 'CRIM-2024-9120', lawyerBar: 'MS/4417/2014', custody: 'In custody' },
-    ],
-    victims: {
-      total: 1,
-      minors: 1,
-      adults: 0,
-      details: [
-        { name: 'Minor Child (Identity Withheld)', masked: true, age: 13, relationship: 'Primary Complainant & Victim' },
-      ],
-    },
-    weapons: [],
-    evidence: [
-      {
-        id: 'ev-p-01',
-        code: 'EX-P-1',
-        kind: 'Documentary',
-        title: 'Statement recorded under Section 183 BNSS (Sec 164 CrPC)',
-        detail: 'Confidential statement of the victim recorded before Judicial Magistrate II, Madurai in presence of support person.',
-        custodyOfficer: 'Dy.SP Kavitha Rajan',
-        date: '2025-06-14',
-        place: 'Court of JM-II, Madurai',
-        labStatus: 'n/a',
-        admission: 'admitted',
-        chainHash: '1a2b3c4d5e6f7a8b9c0d',
-      },
-      {
-        id: 'ev-p-02',
-        code: 'EX-P-2',
-        kind: 'Forensic',
-        title: 'DNA Profiling & Serology Examination Report',
-        detail: 'DNA isolation from forensic swab compared with accused reference sample.',
-        custodyOfficer: 'Dy.SP Kavitha Rajan',
-        date: '2025-08-20',
-        place: 'Forensic Lab Chennai',
-        labStatus: 'received',
-        admission: 'admitted',
-        chainHash: '9f8e7d6c5b4a3f2e1d0c',
-        notes: 'Positive allele match report signed by Dr. K. Meenakshi, DNA Analyst.',
-      },
-    ],
-    documents: [],
-    hearings: [],
-    additionalDetails: 'Trial period exceeded 1 year from cognizance under POCSO s.35(2). Immediate in-camera recording required with DLSA support person.',
-    isClosed: false,
-  },
-  {
-    id: 'dl-cr-2026-00481',
-    number: 'DL-CR-2026-PSCT-00481',
-    title: 'State (NCT of Delhi) v. Rahul Verma & 2 Ors. (U/S 103 BNS / 302 IPC)',
-    type: 'Criminal',
-    court: 'Principal Sessions Court, Delhi · Bench 04',
-    acts: ['BNS s.103(1)', 'BNS s.309(4)', 'Arms Act s.25'],
-    stage: 'Cross Examination of Investigating Officer',
-    status: 'warning',
-    filingDate: '2026-01-15',
-    nextHearing: '21 Oct 2026',
-    judge: 'Hon. Justice R. Venkataraman',
-    policeStation: 'PS Cyber Thana / Special Crime Branch, New Delhi',
-    fir: { no: '12/2026', date: '10 Jan 2026' },
-    io: {
-      name: 'Insp. Vikram Singh',
-      rank: 'Senior Inspector of Police (Special Cell)',
-      badge: 'DL-POL-7741',
-      policeStation: 'PS Cyber Thana, New Delhi',
-      phone: '+91-98110-44199',
-      chargesheetRef: 'CS-DL-12/2026 filed 10 Jan 2026',
-    },
-    parties: [
-      { role: 'Prosecutor', name: 'Adv. Rajesh Khanna (Standing Counsel)', lawyerBar: 'D/1482/2004' },
-      { role: 'Complainant / Offended Party', name: 'Sunil Verma (Brother of Deceased)' },
-      { role: 'Victim', name: 'Late Sunita Devi (Deceased)' },
-      { role: 'Accused', name: 'Rahul Verma (Alias "Rocky")', crimId: 'CRIM-2024-8819', lawyerBar: 'D/2190/2005', custody: 'In custody' },
-      { role: 'Accused', name: 'Vikram Malhotra', crimId: 'CRIM-2025-3391', lawyerBar: 'D/2190/2005', custody: 'In custody' },
-    ],
-    victims: {
-      total: 1,
-      minors: 0,
-      adults: 1,
-      details: [
-        { name: 'Late Sunita Devi', masked: false, age: 36, relationship: 'Deceased Victim of Armed Robbery Assault' },
-      ],
-    },
-    weapons: [
-      {
-        id: 'wpn-dl-01',
-        type: 'FIREARM',
-        makeModel: 'Factory-grade 9mm Glock clone semi-automatic pistol',
-        serialNumber: 'GLK-99120-DELHI',
-        recoveryMemo: 'Seizure memo PS-CT-MEMO-2026-091 dated 11 Jan 2026',
-        recoveryDate: '2026-01-11',
-        recoveryPlace: 'Behind Mayur Vihar Pocket 1 drain culvert, New Delhi',
-        ballisticStatus: 'MATCHED',
-        notes: 'Forensic ballistics test confirms fired 9mm casing recovered from crime scene matched firing pin striations.',
-      },
-    ],
-    evidence: [
-      {
-        id: 'ev-dl-01',
-        code: 'EX-P-1',
-        kind: 'Ballistic',
-        title: '9mm Glock clone pistol & 4 fired cartridge cases',
-        detail: 'Recovered on secret disclosure memo of Accused Rahul Verma.',
-        custodyOfficer: 'Insp. Vikram Singh',
-        date: '2026-01-11',
-        place: 'CFSL New Delhi',
-        labStatus: 'received',
-        admission: 'admitted',
-        chainHash: '5e4d3c2b1a0f9e8d7c6b',
-        notes: 'CFSL Ballistic Report No. BAL-2026-448 positive match.',
-      },
-      {
-        id: 'ev-dl-02',
-        code: 'EX-P-2',
-        kind: 'Digital',
-        title: 'Tower CDR dumps and geo-triangulation packet',
-        detail: 'Airtel & Jio cellular telemetry showing accused handset concurrently hopping same micro-tower at 21:14 hrs.',
-        custodyOfficer: 'SI Rohit Narang',
-        date: '2026-01-12',
-        place: 'Special Cell Analytics Lab',
-        labStatus: 'received',
-        admission: 'admitted',
-        chainHash: '3a4b5c6d7e8f9a0b1c2d',
-      },
-    ],
-    documents: [],
-    hearings: [],
-    additionalDetails: 'Case reached stage of IO cross-examination. Defense attempting to impeach independent recovery memo witness.',
-    isClosed: false,
-  },
-]
-
-// Assign initial documents and hearings to cases
-INITIAL_CASES.forEach((c) => {
-  c.documents = INITIAL_DOCUMENTS.filter((d) => d.caseId === c.id)
-  c.hearings = INITIAL_HEARINGS.filter((h) => h.caseId === c.id)
-})
+export const INITIAL_PUNISHMENTS: PunishmentRecord[] = []
+export const INITIAL_DOCUMENTS: DocumentRecord[] = []
+export const INITIAL_HEARINGS: HearingRecord[] = []
+export const INITIAL_ALARMS: AlarmRecord[] = []
+export const INITIAL_CASES: FullCaseRecord[] = []
 
 // ============================================================================
 // STORE STATE WITH LOCALSTORAGE PERSISTENCE
 // ============================================================================
 
 const STORAGE_KEYS = {
-  CASES: 'nyayadesk_cases_v2',
-  CRIMINALS: 'nyayadesk_criminals_v2',
-  LAWYERS: 'nyayadesk_lawyers_v2',
-  HEARINGS: 'nyayadesk_hearings_v2',
-  PUNISHMENTS: 'nyayadesk_punishments_v2',
-  DOCUMENTS: 'nyayadesk_documents_v2',
-  ALARMS: 'nyayadesk_alarms_v2',
-  THEME: 'nyayadesk_theme_v2',
-  BACKUP_META: 'nyayadesk_backup_meta_v2',
+  CASES: 'mercy_clean_cases_v3',
+  CRIMINALS: 'mercy_clean_criminals_v3',
+  LAWYERS: 'mercy_clean_lawyers_v3',
+  HEARINGS: 'mercy_clean_hearings_v3',
+  PUNISHMENTS: 'mercy_clean_punishments_v3',
+  DOCUMENTS: 'mercy_clean_documents_v3',
+  ALARMS: 'mercy_clean_alarms_v3',
+  THEME: 'mercy_theme_v3',
+  BACKUP_META: 'mercy_backup_meta_v3',
+}
+
+if (typeof window !== 'undefined') {
+  const legacyKeys = [
+    'nyayadesk_cases_v2',
+    'nyayadesk_hearings_v2',
+    'nyayadesk_documents_v2',
+    'nyayadesk_criminals_v2',
+    'nyayadesk_lawyers_v2',
+    'nyayadesk_punishments_v2',
+    'nyayadesk_alarms_v2',
+    'nyayadesk_theme_v2',
+    'nyayadesk_backup_meta_v2',
+    'mercy_cases_v5',
+    'mercy_hearings_v5',
+    'mercy_real_cases_v1',
+    'mercy_real_criminals_v1',
+    'mercy_real_lawyers_v1',
+    'mercy_real_hearings_v1',
+    'mercy_real_punishments_v1',
+    'mercy_real_documents_v1',
+    'mercy_real_alarms_v1',
+    'mercy_clean_dockets_v2',
+    'mercy_clean_criminals_v2',
+    'mercy_clean_lawyers_v2',
+    'mercy_clean_hearings_v2',
+    'mercy_clean_punishments_v2',
+    'mercy_clean_documents_v2',
+    'mercy_clean_alarms_v2',
+  ]
+  legacyKeys.forEach((k) => localStorage.removeItem(k))
 }
 
 function loadFromStorage<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key)
     if (raw) {
-      const parsed = JSON.parse(raw) as T
-      if (Array.isArray(fallback) && Array.isArray(parsed) && parsed.length === 0 && fallback.length > 0) {
-        return fallback
-      }
-      return parsed
+      return JSON.parse(raw) as T
     }
   } catch (e) {
     console.warn(`Error reading localStorage for ${key}`, e)
@@ -1368,6 +447,70 @@ class JudicialStoreService {
     this.punishments = loadFromStorage(STORAGE_KEYS.PUNISHMENTS, INITIAL_PUNISHMENTS)
     this.documents = loadFromStorage(STORAGE_KEYS.DOCUMENTS, INITIAL_DOCUMENTS)
     this.alarms = loadFromStorage(STORAGE_KEYS.ALARMS, INITIAL_ALARMS)
+    this.syncFromSupabase()
+  }
+
+  public async syncFromSupabase(): Promise<void> {
+    if (!supabase) return
+    try {
+      const { data: supaCases } = await supabase.from('cases').select('*')
+      if (supaCases && supaCases.length > 0) {
+        this.cases = supaCases.map((sc: any) => ({
+          id: sc.id,
+          number: sc.number || sc.case_number || 'CASE-001',
+          title: sc.title || sc.case_name || 'Judicial Matter',
+          type: sc.type || sc.case_type || 'Criminal',
+          court: sc.court || sc.court_name || 'Principal Sessions Court · Bench 04',
+          acts: sc.acts || [],
+          stage: sc.stage || 'Framing of Charges',
+          status: sc.status || 'ontrack',
+          filingDate: sc.filing_date || new Date().toISOString().slice(0, 10),
+          nextHearing: sc.next_hearing || '2026-10-24',
+          judge: sc.judge || 'Hon. Justice R. Venkataraman',
+          policeStation: sc.police_station || 'PS Crime Branch',
+          fir: { no: sc.fir_no || 'N/A', date: sc.fir_date || sc.filing_date },
+          io: {
+            name: sc.investigating_officer || 'Unassigned',
+            rank: 'Inspector',
+            badge: 'POL-01',
+            policeStation: sc.police_station || 'PS Crime Branch',
+            phone: '',
+            chargesheetRef: '',
+          },
+          parties: [],
+          victims: { total: 0, minors: 0, adults: 0, details: [] },
+          weapons: [],
+          evidence: [],
+          documents: [],
+          hearings: [],
+          additionalDetails: sc.summary || '',
+          isClosed: Boolean(sc.is_closed),
+        }))
+        this.notify()
+      }
+
+      const { data: supaDocs } = await supabase.from('documents').select('*')
+      if (supaDocs && supaDocs.length > 0) {
+        this.documents = supaDocs.map((sd: any) => ({
+          id: sd.id,
+          caseId: sd.case_id,
+          caseNumber: sd.case_number || '',
+          canonicalName: sd.canonical_name || 'Document',
+          originalFileName: sd.original_file_name || 'file.docx',
+          submittingParty: sd.submitting_party || 'DEFENSE_ADVOCATE',
+          advocateOrOfficer: sd.advocate_or_officer || 'Advocate',
+          submissionDate: sd.submission_date || new Date().toISOString().slice(0, 10),
+          fileSize: sd.file_size || '1.0 MB',
+          pages: sd.pages || 1,
+          kind: sd.kind || 'Affidavit (.docx)',
+          sha256: sd.sha256 || '0000',
+          ocrExcerpt: sd.ocr_excerpt || '',
+        }))
+        this.notify()
+      }
+    } catch (e) {
+      console.warn('Supabase sync notice:', e)
+    }
   }
 
   public subscribe(fn: () => void): () => void {
@@ -1384,6 +527,9 @@ class JudicialStoreService {
     this.documents = []
     this.alarms = []
     this.notify()
+    if (typeof window !== 'undefined') {
+      Object.values(STORAGE_KEYS).forEach((k) => localStorage.removeItem(k))
+    }
   }
 
   private notify(): void {
@@ -1461,6 +607,31 @@ class JudicialStoreService {
     }
     this.cases = [newCase, ...this.cases]
     this.notify()
+
+    if (supabase) {
+      try {
+        supabase.from('cases').upsert({
+          id: newCase.id,
+          number: newCase.number,
+          title: newCase.title,
+          type: newCase.type,
+          court: newCase.court,
+          acts: newCase.acts,
+          stage: newCase.stage,
+          status: newCase.status,
+          filing_date: newCase.filingDate,
+          next_hearing: newCase.nextHearing,
+          judge: newCase.judge,
+          police_station: newCase.policeStation,
+          fir_no: newCase.fir?.no || 'N/A',
+          fir_date: newCase.fir?.date || newCase.filingDate,
+          summary: newCase.additionalDetails,
+          is_closed: newCase.isClosed,
+        }).then(() => {}).catch(() => {})
+      } catch (e) {
+        console.warn('Supabase upsert case error:', e)
+      }
+    }
     return newCase
   }
 
@@ -1485,6 +656,24 @@ class JudicialStoreService {
       })
     }
     this.notify()
+
+    if (supabase) {
+      try {
+        const c = this.cases[idx]
+        supabase.from('cases').update({
+          title: c.title,
+          type: c.type,
+          stage: c.stage,
+          status: c.status,
+          next_hearing: c.nextHearing,
+          police_station: c.policeStation,
+          acts: c.acts,
+        }).eq('id', caseId).then(() => {}).catch(() => {})
+      } catch (e) {
+        console.warn('Supabase update case error:', e)
+      }
+    }
+
     return this.cases[idx]
   }
 
@@ -1496,6 +685,15 @@ class JudicialStoreService {
     this.documents = this.documents.filter((d) => d.caseId !== caseId)
     this.alarms = this.alarms.filter((a) => a.caseId !== caseId)
     this.notify()
+
+    if (supabase) {
+      try {
+        supabase.from('cases').delete().eq('id', caseId).then(() => {}).catch(() => {})
+      } catch (e) {
+        console.warn('Supabase delete case error:', e)
+      }
+    }
+
     return true
   }
 
@@ -1651,6 +849,28 @@ class JudicialStoreService {
       }
     }
     this.notify()
+
+    if (supabase) {
+      try {
+        supabase.from('documents').upsert({
+          id: newDoc.id,
+          case_id: newDoc.caseId,
+          canonical_name: newDoc.canonicalName,
+          original_file_name: newDoc.originalFileName,
+          submitting_party: newDoc.submittingParty,
+          advocate_or_officer: newDoc.advocateOrOfficer,
+          submission_date: newDoc.submissionDate,
+          file_size: newDoc.fileSize,
+          pages: newDoc.pages,
+          kind: newDoc.kind,
+          sha256: newDoc.sha256,
+          ocr_excerpt: newDoc.ocrExcerpt,
+        }).then(() => {}).catch(() => {})
+      } catch (e) {
+        console.warn('Supabase document upsert error:', e)
+      }
+    }
+
     return newDoc
   }
 
@@ -1662,6 +882,15 @@ class JudicialStoreService {
       c.documents = c.documents.filter((d) => d.id !== docId)
     })
     this.notify()
+
+    if (supabase) {
+      try {
+        supabase.from('documents').delete().eq('id', docId).then(() => {}).catch(() => {})
+      } catch (e) {
+        console.warn('Supabase document delete error:', e)
+      }
+    }
+
     return true
   }
 

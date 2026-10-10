@@ -65,14 +65,82 @@ export default function Dashboard() {
   const [selectedCaseId, setSelectedCaseId] = useState<string>(cases[0]?.id || '')
   const selectedCase = cases.find((c) => c.id === selectedCaseId) || cases[0]
 
-  // Calendar day state (defaults to 12)
-  const [selectedCalendarDay, setSelectedCalendarDay] = useState<number>(12)
-  const selectedDateStr = `2026-10-${String(selectedCalendarDay).padStart(2, '0')}`
+  // Live Courtroom Date & Time
+  const [now, setNow] = useState<Date>(new Date())
 
-  // Filter hearings for selected date
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const getIsoDate = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+  const todayStr = getIsoDate(now)
+
+  // Calendar month view date (defaults to current month)
+  const [calendarViewDate, setCalendarViewDate] = useState<Date>(new Date())
+
+  // Selected date string (defaults to today's date)
+  const [selectedDateStr, setSelectedDateStr] = useState<string>(todayStr)
+
+  // Filter hearings for selected date (strictly real records)
   const hearingsForDay = hearings.filter((h) => h.date === selectedDateStr)
-  // Fallback to active hearings if selected day has 0 so interface remains rich and informative
-  const displayHearings = hearingsForDay.length > 0 ? hearingsForDay : hearings.slice(0, 5)
+  const displayHearings = hearingsForDay
+
+  const isDateToday = selectedDateStr === todayStr
+  const selectedDateObj = new Date(selectedDateStr + 'T00:00:00')
+  const formattedSelectedDate = isNaN(selectedDateObj.getTime())
+    ? selectedDateStr
+    : selectedDateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+
+  const currentHour = now.getHours()
+  const greeting = currentHour < 12 ? 'Good morning' : currentHour < 17 ? 'Good afternoon' : 'Good evening'
+
+  // Dynamic calendar matrix calculations for calendarViewDate
+  const viewYear = calendarViewDate.getFullYear()
+  const viewMonth = calendarViewDate.getMonth()
+  const isViewingCurrentMonth =
+    viewYear === now.getFullYear() && viewMonth === now.getMonth()
+
+  const daysInCurrentMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
+  const firstDayWeekday = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7 // Mon = 0, Sun = 6
+  const daysInPrevMonth = new Date(viewYear, viewMonth, 0).getDate()
+
+  const prevMonthCells = Array.from({ length: firstDayWeekday }, (_, i) => {
+    const day = daysInPrevMonth - firstDayWeekday + i + 1
+    const d = new Date(viewYear, viewMonth - 1, day)
+    return { day, iso: getIsoDate(d), isCurrentMonth: false }
+  })
+
+  const currentMonthCells = Array.from({ length: daysInCurrentMonth }, (_, i) => {
+    const day = i + 1
+    const d = new Date(viewYear, viewMonth, day)
+    return { day, iso: getIsoDate(d), isCurrentMonth: true }
+  })
+
+  const totalCellsSoFar = prevMonthCells.length + currentMonthCells.length
+  const nextMonthPadding = totalCellsSoFar % 7 === 0 ? 0 : 7 - (totalCellsSoFar % 7)
+  const nextMonthCells = Array.from({ length: nextMonthPadding }, (_, i) => {
+    const day = i + 1
+    const d = new Date(viewYear, viewMonth + 1, day)
+    return { day, iso: getIsoDate(d), isCurrentMonth: false }
+  })
+
+  const allCalendarCells = [...prevMonthCells, ...currentMonthCells, ...nextMonthCells]
+
+  const handlePrevMonth = () => {
+    setCalendarViewDate(new Date(viewYear, viewMonth - 1, 1))
+  }
+
+  const handleNextMonth = () => {
+    setCalendarViewDate(new Date(viewYear, viewMonth + 1, 1))
+  }
+
+  const handleJumpToToday = () => {
+    setCalendarViewDate(new Date())
+    setSelectedDateStr(todayStr)
+  }
 
   // Real Metric Calculations
   const activeCases = cases.filter((c) => !c.isClosed)
@@ -107,7 +175,7 @@ export default function Dashboard() {
   ).length
 
   const disposalRate =
-    cases.length > 0 ? Math.max(88, Math.round((closedCases.length / cases.length) * 100) || 92) : 92
+    cases.length > 0 ? Math.round((closedCases.length / cases.length) * 100) : 0
 
   // --------------------------------------------------------------------------
   // MODAL STATES FOR CRUD OPERATIONS
@@ -312,13 +380,32 @@ export default function Dashboard() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
-            Good morning, {user?.name || 'Hon. Justice Venkataraman'}
+            {greeting}, {user?.name || 'Hon. Justice Venkataraman'}
           </h1>
           <p className="mt-1 text-xs md:text-sm text-zinc-500 max-w-2xl">
-            Mercy wishes you a fair and decisive day. {displayHearings.length} judicial matters scheduled for review today. You have {activeCases.length} active trials under management across your bench and {documents.length} verified dockets synced.
+            Mercy wishes you a fair and decisive day. Today is{' '}
+            <span className="font-semibold text-zinc-800">
+              {now.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            </span>
+            . You have {hearings.filter((h) => h.date === todayStr).length} judicial matters scheduled for today, {activeCases.length} active trials under management across your bench, and {documents.length} verified dockets synced.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="md"
+            onClick={() => {
+              if (window.confirm('Delete all cached cases and reset to 0 clean state?')) {
+                judicialStore.resetToCleanState()
+                toast('Database cleared of all mock and cached items.', 'ok')
+              }
+            }}
+            title="Reset to clean 0 state"
+          >
+            <Trash2 className="size-4 text-rose-500" />
+            <span>Reset Data</span>
+          </Button>
+
           <Button
             variant="outline"
             size="md"
@@ -353,36 +440,42 @@ export default function Dashboard() {
               <div className="flex items-center justify-between font-bold text-sm">
                 <span>Today's Hearings:</span>
                 <span className="text-xs bg-amber-200/80 px-2.5 py-0.5 rounded-full font-semibold">
-                  {displayHearings.length} Listed
+                  {hearings.filter((h) => h.date === todayStr).length} Listed
                 </span>
               </div>
               <div className="mt-3 flex items-baseline gap-4 text-xs font-semibold">
                 <div>
-                  <span className="text-lg font-black block">{forenoonCount || 8}</span>
+                  <span className="text-lg font-black block">{forenoonCount}</span>
                   <span className="text-[11px] opacity-75">Forenoon</span>
                 </div>
                 <div>
-                  <span className="text-lg font-black block">{afternoonCount || 6}</span>
+                  <span className="text-lg font-black block">{afternoonCount}</span>
                   <span className="text-[11px] opacity-75">Afternoon</span>
                 </div>
                 <div>
-                  <span className="text-lg font-black block">{pocsoHearingsCount || 2}</span>
+                  <span className="text-lg font-black block">{pocsoHearingsCount}</span>
                   <span className="text-[11px] opacity-75">POCSO In-Camera</span>
                 </div>
               </div>
 
               {/* Dynamic rounded bar chart visualization */}
               <div className="mt-5 flex items-end justify-between gap-1.5 h-16 pt-2">
-                {[35, 55, 80, 100, 65, 45, 25].map((h, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                    <div
-                      className={`w-full rounded-full transition-all ${
-                        i === 3 ? 'bg-amber-950' : 'bg-amber-900/25'
-                      }`}
-                      style={{ height: `${h}%` }}
-                    />
+                {displayHearings.length > 0 ? (
+                  [35, 55, 80, 100, 65, 45, 25].map((h, i) => (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                      <div
+                        className={`w-full rounded-full transition-all ${
+                          i === 3 ? 'bg-amber-950' : 'bg-amber-900/25'
+                        }`}
+                        style={{ height: `${h}%` }}
+                      />
+                    </div>
+                  ))
+                ) : (
+                  <div className="w-full flex items-center justify-center text-xs font-medium opacity-60">
+                    No hearings scheduled
                   </div>
-                ))}
+                )}
               </div>
               <div className="mt-2 flex justify-between text-[10px] opacity-70 font-medium">
                 <span>10:00 a.m.</span>
@@ -409,7 +502,7 @@ export default function Dashboard() {
                   <span className="text-[11px] opacity-75">Disposed / Decreed</span>
                 </div>
                 <div>
-                  <span className="text-lg font-black block">100%</span>
+                  <span className="text-lg font-black block">{cases.length > 0 ? '100%' : '0%'}</span>
                   <span className="text-[11px] opacity-75">Cloud Synced</span>
                 </div>
               </div>
@@ -460,9 +553,9 @@ export default function Dashboard() {
               </div>
 
               <div className="mt-5 flex gap-1.5 text-[10.5px] font-bold">
-                <span className="bg-emerald-900/10 px-2.5 py-1 rounded-full">{inTrialCount || 3} IN TRIAL</span>
-                <span className="bg-emerald-900/10 px-2.5 py-1 rounded-full">{inEvidenceCount || 2} EVIDENCE</span>
-                <span className="bg-emerald-900/10 px-2.5 py-1 rounded-full">{inBailCount || 1} BAIL</span>
+                <span className="bg-emerald-900/10 px-2.5 py-1 rounded-full">{inTrialCount} IN TRIAL</span>
+                <span className="bg-emerald-900/10 px-2.5 py-1 rounded-full">{inEvidenceCount} EVIDENCE</span>
+                <span className="bg-emerald-900/10 px-2.5 py-1 rounded-full">{inBailCount} BAIL</span>
               </div>
             </div>
 
@@ -703,23 +796,48 @@ export default function Dashboard() {
         {/* Right Column: Calendar Widget & Real Timeline */}
         <div className="space-y-6">
           <Card className="p-5.5 space-y-4">
+            {/* Live Courtroom Clock */}
+            <div className="flex items-center justify-between bg-[#121316] text-white px-3.5 py-2.5 rounded-2xl shadow-sm">
+              <div className="flex items-center gap-2">
+                <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[10.5px] font-bold tracking-wider uppercase text-zinc-300">Live Court Time</span>
+              </div>
+              <div className="flex items-center gap-1.5 font-mono text-xs font-bold text-white">
+                <Clock className="size-3.5 text-[#FF5C5C]" />
+                <span>{now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+              </div>
+            </div>
+
             {/* Calendar Month Header */}
             <div className="flex items-center justify-between font-bold text-sm text-foreground">
-              <span className="px-3 py-1 rounded-full bg-zinc-100 text-xs font-bold">
-                October 2026
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 rounded-full bg-zinc-100 text-xs font-bold">
+                  {calendarViewDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                </span>
+                {!isViewingCurrentMonth && (
+                  <button
+                    type="button"
+                    onClick={handleJumpToToday}
+                    className="text-[11px] font-bold text-[#FF5C5C] hover:underline cursor-pointer"
+                  >
+                    Today
+                  </button>
+                )}
+              </div>
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => toast('Displaying current term October 2026', 'info')}
-                  className="grid size-7 place-items-center rounded-full hover:bg-zinc-100 cursor-pointer"
+                  onClick={handlePrevMonth}
+                  className="grid size-7 place-items-center rounded-full hover:bg-zinc-100 cursor-pointer text-zinc-700"
+                  title="Previous Month"
                 >
                   <ChevronLeft className="size-4" />
                 </button>
                 <button
                   type="button"
-                  onClick={() => toast('November 2026 docket pending gazette', 'info')}
-                  className="grid size-7 place-items-center rounded-full hover:bg-zinc-100 cursor-pointer"
+                  onClick={handleNextMonth}
+                  className="grid size-7 place-items-center rounded-full hover:bg-zinc-100 cursor-pointer text-zinc-700"
+                  title="Next Month"
                 >
                   <ChevronRight className="size-4" />
                 </button>
@@ -737,59 +855,37 @@ export default function Dashboard() {
               <div>SU</div>
             </div>
 
-            {/* Days Matrix with interactive selection */}
+            {/* Days Matrix with real interactive selection */}
             <div className="grid grid-cols-7 text-center text-xs font-semibold gap-y-1">
-              <div className="text-zinc-300 py-1">28</div>
-              <div className="text-zinc-300 py-1">29</div>
-              <div className="text-zinc-300 py-1">30</div>
-              <div className="py-1">1</div>
-              <div className="py-1">2</div>
-              <div className="text-zinc-400 py-1">3</div>
-              <div className="text-zinc-400 py-1">4</div>
+              {allCalendarCells.map((cell, idx) => {
+                const isSelected = selectedDateStr === cell.iso
+                const isTodayCell = todayStr === cell.iso
+                const dayHearings = hearings.filter((h) => h.date === cell.iso)
 
-              <div className="py-1">5</div>
-              <div className="py-1">6</div>
-              <div className="py-1">7</div>
-              <div className="py-1">8</div>
-              <div className="py-1">9</div>
-              <div className="text-zinc-400 py-1">10</div>
-              <div className="text-zinc-400 py-1">11</div>
-
-              {/* Day 12 to 18 */}
-              {[12, 13, 14, 15, 16, 17, 18].map((day) => {
-                const isSelected = selectedCalendarDay === day
                 return (
-                  <div key={day} className="py-1">
+                  <div key={idx} className="py-0.5 relative">
                     <button
                       type="button"
-                      onClick={() => setSelectedCalendarDay(day)}
-                      className={`size-7 rounded-full font-bold grid place-items-center mx-auto transition-all cursor-pointer ${
+                      onClick={() => setSelectedDateStr(cell.iso)}
+                      className={`size-7.5 rounded-full font-bold grid place-items-center mx-auto transition-all cursor-pointer relative ${
                         isSelected
                           ? 'bg-[#FF5C5C] text-white shadow-xs'
-                          : 'hover:bg-zinc-100 text-zinc-800'
+                          : isTodayCell
+                          ? 'ring-2 ring-[#FF5C5C] text-[#FF5C5C] bg-[#FF5C5C]/10 font-extrabold'
+                          : cell.isCurrentMonth
+                          ? 'hover:bg-zinc-100 text-zinc-800'
+                          : 'text-zinc-300 hover:bg-zinc-50'
                       }`}
+                      title={`${cell.iso}${dayHearings.length ? ` (${dayHearings.length} hearings)` : ''}`}
                     >
-                      {day}
+                      {cell.day}
+                      {dayHearings.length > 0 && !isSelected && (
+                        <span className="absolute bottom-0.5 size-1 rounded-full bg-[#FF5C5C]" />
+                      )}
                     </button>
                   </div>
                 )
               })}
-
-              {[19, 20, 21, 22, 23, 24, 25].map((day) => (
-                <div key={day} className="py-1">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedCalendarDay(day)}
-                    className={`size-7 rounded-full font-bold grid place-items-center mx-auto transition-all cursor-pointer ${
-                      selectedCalendarDay === day
-                        ? 'bg-[#FF5C5C] text-white shadow-xs'
-                        : 'hover:bg-zinc-100 text-zinc-800'
-                    }`}
-                  >
-                    {day}
-                  </button>
-                </div>
-              ))}
             </div>
 
             {/* Add Event / Hearing Button */}
@@ -803,53 +899,77 @@ export default function Dashboard() {
               </button>
             </Link>
 
-            {/* Today's Timeline Section */}
+            {/* Selected Date Timeline Section */}
             <div className="pt-4 border-t border-black/[0.06] space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-xs font-bold text-foreground">
-                    Oct {selectedCalendarDay} · Bench Timeline
+                  <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <span>{isDateToday ? 'Today' : formattedSelectedDate}</span>
+                    <span className="text-zinc-400 font-normal">· Bench Timeline</span>
                   </h4>
-                  <span className="text-[11px] text-zinc-400">Chronological courtroom flow</span>
+                  <span className="text-[11px] text-zinc-400">
+                    {isDateToday
+                      ? `Live courtroom flow (${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`
+                      : 'Chronological courtroom flow'}
+                  </span>
                 </div>
                 <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600">
-                  {displayHearings.length} Events
+                  {displayHearings.length} {displayHearings.length === 1 ? 'Matter' : 'Matters'}
                 </span>
               </div>
 
-              {/* Dynamic vertical timeline items with connecting lines */}
-              <div className="space-y-3 relative before:absolute before:left-3 before:top-3 before:bottom-3 before:w-0.5 before:bg-zinc-200">
-                {displayHearings.map((h, i) => {
-                  const colors = [
-                    { dot: 'bg-[#FF5C5C]', box: 'bg-rose-50 border-rose-100', textTitle: 'text-rose-950', textTime: 'text-rose-700', sub: 'text-rose-800/80' },
-                    { dot: 'bg-blue-500', box: 'bg-blue-50 border-blue-100', textTitle: 'text-blue-950', textTime: 'text-blue-700', sub: 'text-blue-800/80' },
-                    { dot: 'bg-amber-500', box: 'bg-amber-50 border-amber-100', textTitle: 'text-amber-950', textTime: 'text-amber-700', sub: 'text-amber-800/80' },
-                    { dot: 'bg-emerald-500', box: 'bg-emerald-50 border-emerald-100', textTitle: 'text-emerald-950', textTime: 'text-emerald-700', sub: 'text-emerald-800/80' },
-                  ]
-                  const c = colors[i % colors.length]
-
-                  return (
-                    <div
-                      key={h.id || i}
-                      className="relative flex items-start gap-3 pl-1 cursor-pointer transition-transform hover:translate-x-0.5"
-                      onClick={() => setSelectedCaseId(h.caseId)}
+              {displayHearings.length === 0 ? (
+                <div className="py-6 px-4 text-center rounded-2xl bg-zinc-50 border border-zinc-100 space-y-2">
+                  <Clock className="size-6 text-zinc-300 mx-auto" />
+                  <p className="text-xs font-semibold text-zinc-700">
+                    No hearings scheduled for {isDateToday ? 'Today' : formattedSelectedDate}
+                  </p>
+                  <p className="text-[11px] text-zinc-400">
+                    Court hall is clear or hearings awaiting docket entry.
+                  </p>
+                  <Link to="/schedule">
+                    <button
+                      type="button"
+                      className="mt-1 text-xs font-bold text-[#FF5C5C] hover:underline cursor-pointer"
                     >
-                      <div className={`size-5 rounded-full ${c.dot} text-white font-bold text-[9px] grid place-items-center shrink-0 z-10 shadow-xs`}>
-                        •
-                      </div>
-                      <div className={`flex-1 p-3 rounded-2xl ${c.box} border`}>
-                        <div className="flex items-center justify-between">
-                          <span className={`font-bold text-xs ${c.textTitle}`}>{h.stage}</span>
-                          <span className={`text-[10px] font-semibold ${c.textTime}`}>{h.time}</span>
+                      + Schedule Hearing for this Date
+                    </button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-3 relative before:absolute before:left-3 before:top-3 before:bottom-3 before:w-0.5 before:bg-zinc-200">
+                  {displayHearings.map((h, i) => {
+                    const colors = [
+                      { dot: 'bg-[#FF5C5C]', box: 'bg-rose-50 border-rose-100', textTitle: 'text-rose-950', textTime: 'text-rose-700', sub: 'text-rose-800/80' },
+                      { dot: 'bg-blue-500', box: 'bg-blue-50 border-blue-100', textTitle: 'text-blue-950', textTime: 'text-blue-700', sub: 'text-blue-800/80' },
+                      { dot: 'bg-amber-500', box: 'bg-amber-50 border-amber-100', textTitle: 'text-amber-950', textTime: 'text-amber-700', sub: 'text-amber-800/80' },
+                      { dot: 'bg-emerald-500', box: 'bg-emerald-50 border-emerald-100', textTitle: 'text-emerald-950', textTime: 'text-emerald-700', sub: 'text-emerald-800/80' },
+                    ]
+                    const c = colors[i % colors.length]
+
+                    return (
+                      <div
+                        key={h.id || i}
+                        className="relative flex items-start gap-3 pl-1 cursor-pointer transition-transform hover:translate-x-0.5"
+                        onClick={() => setSelectedCaseId(h.caseId)}
+                      >
+                        <div className={`size-5 rounded-full ${c.dot} text-white font-bold text-[9px] grid place-items-center shrink-0 z-10 shadow-xs`}>
+                          •
                         </div>
-                        <p className={`text-[11px] ${c.sub} mt-0.5 truncate`}>
-                          {h.caseNumber} · {h.courtHall}
-                        </p>
+                        <div className={`flex-1 p-3 rounded-2xl ${c.box} border`}>
+                          <div className="flex items-center justify-between">
+                            <span className={`font-bold text-xs ${c.textTitle}`}>{h.stage}</span>
+                            <span className={`text-[10px] font-semibold ${c.textTime}`}>{h.time}</span>
+                          </div>
+                          <p className={`text-[11px] ${c.sub} mt-0.5 truncate`}>
+                            {h.caseNumber} · {h.courtHall}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </Card>
         </div>

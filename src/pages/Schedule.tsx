@@ -54,10 +54,24 @@ export default function Schedule() {
   const hearingCounts = judicialStore.getHearingCountByDate()
   const cases = judicialStore.getCases()
 
-  // Selected date state (defaults to 2026-10-12)
-  const [selectedDate, setSelectedDate] = useState('2026-10-12')
+  // Live Date State
+  const [now, setNow] = useState<Date>(new Date())
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const getIsoDate = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+  const todayStr = getIsoDate(now)
+
+  // Selected date state (defaults to today)
+  const [selectedDate, setSelectedDate] = useState(todayStr)
   const [viewScope, setViewScope] = useState<'selected' | 'all'>('selected')
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false)
+  const [calendarViewDate, setCalendarViewDate] = useState<Date>(new Date())
 
   // Quick Dossier Preview Modal
   const [selectedDossierCase, setSelectedDossierCase] = useState<FullCaseRecord | null>(null)
@@ -72,7 +86,7 @@ export default function Schedule() {
 
   // New hearing form state
   const [targetCaseId, setTargetCaseId] = useState(cases[0]?.id || '')
-  const [newDate, setNewDate] = useState('2026-10-16')
+  const [newDate, setNewDate] = useState(todayStr)
   const [newTime, setNewTime] = useState('11:00')
   const [newStage, setNewStage] = useState('Evidence & Witness Examination')
   const [newHall, setNewHall] = useState('Hall 04 (Main Sessions)')
@@ -80,30 +94,37 @@ export default function Schedule() {
   const [attachAlarm, setAttachAlarm] = useState(true)
   const [alarmUrgency, setAlarmUrgency] = useState<'INFO' | 'WARNING' | 'STATUTORY_CRITICAL'>('WARNING')
 
-  // Calendar matrix generator for October 2026
-  const daysInMonth = Array.from({ length: 31 }, (_, i) => {
-    const day = i + 1
-    const dayStr = String(day).padStart(2, '0')
-    const fullDate = `2026-10-${dayStr}`
-    const count = hearingCounts[fullDate] || 0
-    return {
-      day,
-      fullDate,
-      count,
-      isCurrentMonth: true,
-    }
+  // Dynamic calendar matrix generator for calendarViewDate
+  const schedYear = calendarViewDate.getFullYear()
+  const schedMonth = calendarViewDate.getMonth()
+  const daysInSchedMonth = new Date(schedYear, schedMonth + 1, 0).getDate()
+  const firstDaySchedWeekday = (new Date(schedYear, schedMonth, 1).getDay() + 6) % 7 // Mon = 0
+  const daysInSchedPrevMonth = new Date(schedYear, schedMonth, 0).getDate()
+
+  const schedPrevCells = Array.from({ length: firstDaySchedWeekday }, (_, i) => {
+    const day = daysInSchedPrevMonth - firstDaySchedWeekday + i + 1
+    const d = new Date(schedYear, schedMonth - 1, day)
+    const fullDate = getIsoDate(d)
+    return { day, fullDate, count: hearingCounts[fullDate] || 0, isCurrentMonth: false }
   })
 
-  const padDaysBefore = [
-    { day: 28, fullDate: '2026-09-28', count: 0, isCurrentMonth: false },
-    { day: 29, fullDate: '2026-09-29', count: 0, isCurrentMonth: false },
-    { day: 30, fullDate: '2026-09-30', count: 0, isCurrentMonth: false },
-  ]
-  const padDaysAfter = [
-    { day: 1, fullDate: '2026-11-01', count: 0, isCurrentMonth: false },
-  ]
+  const schedCurrentCells = Array.from({ length: daysInSchedMonth }, (_, i) => {
+    const day = i + 1
+    const d = new Date(schedYear, schedMonth, day)
+    const fullDate = getIsoDate(d)
+    return { day, fullDate, count: hearingCounts[fullDate] || 0, isCurrentMonth: true }
+  })
 
-  const calendarGrid = [...padDaysBefore, ...daysInMonth, ...padDaysAfter]
+  const totalSchedCellsSoFar = schedPrevCells.length + schedCurrentCells.length
+  const schedNextPadding = totalSchedCellsSoFar % 7 === 0 ? 0 : 7 - (totalSchedCellsSoFar % 7)
+  const schedNextCells = Array.from({ length: schedNextPadding }, (_, i) => {
+    const day = i + 1
+    const d = new Date(schedYear, schedMonth + 1, day)
+    const fullDate = getIsoDate(d)
+    return { day, fullDate, count: hearingCounts[fullDate] || 0, isCurrentMonth: false }
+  })
+
+  const calendarGrid = [...schedPrevCells, ...schedCurrentCells, ...schedNextCells]
 
   const selectedDateHearings = hearings.filter((h) => h.date === selectedDate)
   const displayedHearings = viewScope === 'selected' ? selectedDateHearings : hearings
@@ -175,24 +196,38 @@ export default function Schedule() {
             <div className="flex items-center justify-between pb-4 border-b border-black/[0.06] mb-4">
               <div className="flex items-center gap-3">
                 <span className="text-base font-extrabold text-foreground">
-                  October 2026
+                  {calendarViewDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
                 </span>
                 <span className="px-3 py-1 rounded-full bg-zinc-100 text-xs font-semibold text-zinc-600">
                   Bench 04 Roster
                 </span>
+                {!(schedYear === now.getFullYear() && schedMonth === now.getMonth()) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCalendarViewDate(new Date())
+                      setSelectedDate(todayStr)
+                    }}
+                    className="text-xs font-bold text-[#FF5C5C] hover:underline cursor-pointer"
+                  >
+                    Today
+                  </button>
+                )}
               </div>
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => toast('Displaying October 2026', 'info')}
+                  onClick={() => setCalendarViewDate(new Date(schedYear, schedMonth - 1, 1))}
                   className="grid size-8 place-items-center rounded-full hover:bg-zinc-100 cursor-pointer"
+                  title="Previous Month"
                 >
                   <ChevronLeft className="size-4" />
                 </button>
                 <button
                   type="button"
-                  onClick={() => toast('November 2026 not yet gazetted', 'info')}
+                  onClick={() => setCalendarViewDate(new Date(schedYear, schedMonth + 1, 1))}
                   className="grid size-8 place-items-center rounded-full hover:bg-zinc-100 cursor-pointer"
+                  title="Next Month"
                 >
                   <ChevronRight className="size-4" />
                 </button>
