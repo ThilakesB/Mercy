@@ -27,6 +27,8 @@ import {
   AlertTriangle,
   User,
   SlidersHorizontal,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react'
 import { judicialStore } from './lib/judicialStore'
 import { isSupabaseConfigured } from './lib/supabase'
@@ -258,7 +260,35 @@ export default function Layout() {
   const { authed, setAuthed, user, logout, isAuthReady, role, theme, setTheme } = useApp()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [alarmsOpen, setAlarmsOpen] = useState(false)
+  const [sidebarHidden, setSidebarHidden] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('mercy_sidebar_hidden') === 'true'
+    }
+    return false
+  })
   const [, setTick] = useState(0)
+
+  const toggleSidebar = () => {
+    setSidebarHidden((prev) => {
+      const next = !prev
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('mercy_sidebar_hidden', String(next))
+      }
+      return next
+    })
+  }
+
+  // Keyboard shortcut Ctrl+B or Cmd+B to toggle sidebar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault()
+        toggleSidebar()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   useEffect(() => {
     return judicialStore.subscribe(() => setTick((t) => t + 1))
@@ -294,14 +324,18 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex p-2 md:p-3.5 transition-colors duration-200">
-      {/* Sleek Dark Rounded Sidebar (Matching Images 2 & 3) */}
+      {/* Sleek Dark Rounded Sidebar */}
       <aside
-        className={`w-56 bg-[#121316] text-white rounded-[28px] shrink-0 flex flex-col justify-between p-4.5 shadow-2xl transition-all ${
-          mobileMenuOpen ? 'fixed inset-y-3 left-3 z-50 w-64' : 'hidden md:flex'
+        className={`bg-[#121316] text-white rounded-[28px] shrink-0 flex flex-col justify-between shadow-2xl transition-all duration-300 ${
+          mobileMenuOpen
+            ? 'fixed inset-y-3 left-3 z-50 w-64 p-4.5'
+            : sidebarHidden
+            ? 'hidden'
+            : 'hidden md:flex w-56 p-4.5'
         }`}
       >
         <div className="space-y-6">
-          {/* Brand Logo with Coral Pill Dot */}
+          {/* Brand Logo with Coral Pill Dot & Desktop Hide Button */}
           <div className="flex items-center justify-between px-2 pt-1">
             <NavLink to="/" className="flex items-center gap-2">
               <span className="font-black text-2xl tracking-tight text-white font-sans">
@@ -309,12 +343,22 @@ export default function Layout() {
               </span>
               <span className="size-2 rounded-full bg-[#FF5C5C]" />
             </NavLink>
-            <button
-              onClick={() => setMobileMenuOpen(false)}
-              className="md:hidden text-zinc-400 hover:text-white"
-            >
-              <X className="size-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={toggleSidebar}
+                className="hidden md:grid size-7 place-items-center rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                title="Hide Sidebar (Ctrl+B)"
+              >
+                <PanelLeftClose className="size-4" />
+              </button>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="md:hidden text-zinc-400 hover:text-white"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
           </div>
 
           {/* General Section */}
@@ -405,16 +449,38 @@ export default function Layout() {
       <div className="flex-1 flex flex-col min-w-0 px-2 md:px-5 py-1">
         {/* Top Floating Utility Header */}
         <header className="min-h-20 flex items-center justify-between gap-4 mb-5">
-          <div className="flex items-center gap-3 md:hidden">
+          <div className="flex items-center gap-3">
+            {/* Mobile Menu trigger */}
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="grid size-11 place-items-center rounded-full bg-white border border-black/10 text-zinc-800 shadow-sm"
+              className="grid size-11 place-items-center rounded-full bg-white border border-black/10 text-zinc-800 shadow-sm md:hidden cursor-pointer"
             >
               <Menu className="size-5" />
             </button>
-            <span className="font-black text-xl tracking-tight text-foreground">
-              Mercy
-            </span>
+
+            {/* Desktop Sidebar Toggle Button */}
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              className="hidden md:grid size-12 sm:size-12.5 place-items-center rounded-full bg-white border border-black/10 text-zinc-700 hover:text-black hover:bg-zinc-50 shadow-sm hover:border-black/25 transition-all cursor-pointer shrink-0"
+              title={sidebarHidden ? 'Show Sidebar (Ctrl+B)' : 'Hide Sidebar (Ctrl+B)'}
+            >
+              {sidebarHidden ? (
+                <PanelLeftOpen className="size-5 text-zinc-800" />
+              ) : (
+                <PanelLeftClose className="size-5 text-zinc-700" />
+              )}
+            </button>
+
+            {/* Brand Logo when sidebar is hidden on desktop, or always on mobile */}
+            <div className={`items-center gap-2 ${sidebarHidden ? 'flex' : 'flex md:hidden'}`}>
+              <NavLink to="/" className="flex items-center gap-2">
+                <span className="font-black text-xl tracking-tight text-foreground font-sans">
+                  Mercy
+                </span>
+                <span className="size-2 rounded-full bg-[#FF5C5C]" />
+              </NavLink>
+            </div>
           </div>
 
           {/* Search bar */}
