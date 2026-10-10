@@ -1,7 +1,8 @@
-import { supabase } from './supabase'
+import { getSupabase } from './supabase'
 import type { CaseRec } from '../data'
 
 export async function searchCases(query: string) {
+  const supabase = getSupabase()
   if (!supabase) return []
 
   const normalized = query.trim()
@@ -19,6 +20,7 @@ export async function searchCases(query: string) {
 }
 
 export async function getCaseById(id: string) {
+  const supabase = getSupabase()
   if (!supabase) return null
 
   const { data, error } = await supabase
@@ -48,6 +50,7 @@ export async function createCase(input: {
   incidentLocation?: string
   summary?: string
 }) {
+  const supabase = getSupabase()
   if (!supabase) throw new Error('Supabase is not configured.')
 
   const { data, error } = await supabase

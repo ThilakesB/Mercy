@@ -66,13 +66,3 @@ export function getSupabase(): SupabaseClient | null {
   }
   return clientInstance
 }
-
-// Proxied client so existing code like `supabase.from(...)` works seamlessly
-export const supabase: SupabaseClient | null = new Proxy({} as SupabaseClient, {
-  get(_target, prop) {
-    const client = getSupabase()
-    if (!client) return undefined
-    const val = (client as any)[prop]
-    return typeof val === 'function' ? val.bind(client) : val
-  },
-})
