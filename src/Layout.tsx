@@ -343,14 +343,15 @@ export default function Layout() {
               </span>
               <span className="size-2 rounded-full bg-[#FF5C5C]" />
             </NavLink>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={toggleSidebar}
-                className="hidden md:grid size-7 place-items-center rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                className="hidden md:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] transition-colors cursor-pointer border border-white/10"
                 title="Hide Sidebar (Ctrl+B)"
               >
-                <PanelLeftClose className="size-4" />
+                <PanelLeftClose className="size-3.5" />
+                <span>Hide</span>
               </button>
               <button
                 onClick={() => setMobileMenuOpen(false)}
@@ -436,6 +437,16 @@ export default function Layout() {
           </div>
 
           <button
+            type="button"
+            onClick={toggleSidebar}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-zinc-300 hover:text-white bg-white/[0.06] hover:bg-white/10 border border-white/5 transition-colors cursor-pointer"
+            title="Collapse / Hide Sidebar"
+          >
+            <PanelLeftClose className="size-3.5" />
+            <span>Hide Sidebar</span>
+          </button>
+
+          <button
             onClick={() => setAuthed(false)}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-rose-400 hover:bg-white/[0.04] transition-colors cursor-pointer"
           >
@@ -458,17 +469,27 @@ export default function Layout() {
               <Menu className="size-5" />
             </button>
 
-            {/* Desktop Sidebar Toggle Button */}
+            {/* Clear Desktop Sidebar Toggle Button */}
             <button
               type="button"
               onClick={toggleSidebar}
-              className="hidden md:grid size-12 sm:size-12.5 place-items-center rounded-full bg-white border border-black/10 text-zinc-700 hover:text-black hover:bg-zinc-50 shadow-sm hover:border-black/25 transition-all cursor-pointer shrink-0"
+              className={`flex items-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-full border text-xs font-bold transition-all cursor-pointer shadow-sm shrink-0 ${
+                sidebarHidden
+                  ? 'bg-[#121316] text-white hover:bg-zinc-800 border-black ring-2 ring-black/20'
+                  : 'bg-white text-zinc-800 hover:bg-zinc-50 border-black/10 hover:border-black/25'
+              }`}
               title={sidebarHidden ? 'Show Sidebar (Ctrl+B)' : 'Hide Sidebar (Ctrl+B)'}
             >
               {sidebarHidden ? (
-                <PanelLeftOpen className="size-5 text-zinc-800" />
+                <>
+                  <PanelLeftOpen className="size-4 text-[#FF5C5C]" />
+                  <span>Show Sidebar</span>
+                </>
               ) : (
-                <PanelLeftClose className="size-5 text-zinc-700" />
+                <>
+                  <PanelLeftClose className="size-4 text-zinc-600" />
+                  <span>Hide Sidebar</span>
+                </>
               )}
             </button>
 
