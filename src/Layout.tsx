@@ -293,7 +293,7 @@ export default function Layout() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F4EB] text-foreground flex p-2 md:p-3.5">
+    <div className="min-h-screen bg-background text-foreground flex p-2 md:p-3.5 transition-colors duration-200">
       {/* Sleek Dark Rounded Sidebar (Matching Images 2 & 3) */}
       <aside
         className={`w-56 bg-[#121316] text-white rounded-[28px] shrink-0 flex flex-col justify-between p-4.5 shadow-2xl transition-all ${

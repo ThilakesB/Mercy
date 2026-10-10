@@ -39,7 +39,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<UserProfile | null>(null)
   const [isAuthReady, setIsAuthReady] = useState<boolean>(false)
   const [toasts, setToasts] = useState<Toast[]>([])
-  const [theme, setThemeState] = useState<'swiss-light' | 'tactical-dark'>('swiss-light')
+  const [theme, setThemeState] = useState<'swiss-light' | 'tactical-dark'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('mercy_theme_mode')
+      if (saved === 'tactical-dark' || saved === 'swiss-light') return saved
+    }
+    return 'swiss-light'
+  })
 
   // Real-time Firebase Authentication listener & Strict Email Enforcement
   useEffect(() => {
@@ -137,7 +143,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme === 'tactical-dark' ? 'tactical-dark' : 'swiss-light')
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('mercy_theme_mode', theme)
+      if (theme === 'tactical-dark') {
+        document.documentElement.setAttribute('data-theme', 'tactical-dark')
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.setAttribute('data-theme', 'swiss-light')
+        document.documentElement.classList.remove('dark')
+      }
+    }
   }, [theme])
 
   const setTheme = (t: 'swiss-light' | 'tactical-dark') => {

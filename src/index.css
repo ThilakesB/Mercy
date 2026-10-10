@@ -197,3 +197,199 @@ body {
     display: block !important;
   }
 }
+
+/* ========================================================================== */
+/* COMPREHENSIVE TACTICAL DARK MODE SYSTEM OVERRIDES                          */
+/* ========================================================================== */
+.dark,
+[data-theme='tactical-dark'] {
+  color-scheme: dark;
+}
+
+.dark body,
+[data-theme='tactical-dark'] body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* Containers & Cards */
+.dark .bg-white,
+[data-theme='tactical-dark'] .bg-white {
+  background-color: #13151A !important;
+  color: #F3F4F6 !important;
+}
+
+.dark .bg-white\/95,
+.dark .bg-white\/90,
+.dark .bg-white\/80,
+[data-theme='tactical-dark'] .bg-white\/95,
+[data-theme='tactical-dark'] .bg-white\/90,
+[data-theme='tactical-dark'] .bg-white\/80 {
+  background-color: rgba(19, 21, 26, 0.95) !important;
+  color: #F3F4F6 !important;
+}
+
+.dark .bg-\[\#F7F4EB\],
+.dark .bg-\[\#F7F4EB\]\/50,
+.dark .bg-\[\#F7F4EB\]\/70,
+.dark .bg-\[\#F7F4EB\]\/30,
+[data-theme='tactical-dark'] .bg-\[\#F7F4EB\],
+[data-theme='tactical-dark'] .bg-\[\#F7F4EB\]\/50,
+[data-theme='tactical-dark'] .bg-\[\#F7F4EB\]\/70,
+[data-theme='tactical-dark'] .bg-\[\#F7F4EB\]\/30 {
+  background-color: #0E0F12 !important;
+}
+
+.dark .bg-\[\#FAF7F0\],
+[data-theme='tactical-dark'] .bg-\[\#FAF7F0\] {
+  background-color: #181A22 !important;
+  color: #F3F4F6 !important;
+}
+
+.dark .bg-\[\#EFECE3\],
+.dark .bg-\[\#EFECE3\]\/70,
+[data-theme='tactical-dark'] .bg-\[\#EFECE3\],
+[data-theme='tactical-dark'] .bg-\[\#EFECE3\]\/70 {
+  background-color: #1C1F28 !important;
+}
+
+.dark .bg-zinc-50,
+.dark .bg-zinc-50\/80,
+[data-theme='tactical-dark'] .bg-zinc-50,
+[data-theme='tactical-dark'] .bg-zinc-50\/80 {
+  background-color: #161820 !important;
+}
+
+.dark .bg-zinc-100,
+.dark .bg-zinc-100\/80,
+[data-theme='tactical-dark'] .bg-zinc-100,
+[data-theme='tactical-dark'] .bg-zinc-100\/80 {
+  background-color: #1E222D !important;
+  color: #E5E7EB !important;
+}
+
+.dark .bg-zinc-200,
+[data-theme='tactical-dark'] .bg-zinc-200 {
+  background-color: #272B38 !important;
+}
+
+/* Typography & Text */
+.dark .text-zinc-900,
+.dark .text-zinc-800,
+.dark .text-foreground,
+[data-theme='tactical-dark'] .text-zinc-900,
+[data-theme='tactical-dark'] .text-zinc-800,
+[data-theme='tactical-dark'] .text-foreground {
+  color: #F3F4F6 !important;
+}
+
+.dark .text-zinc-700,
+[data-theme='tactical-dark'] .text-zinc-700 {
+  color: #D1D5DB !important;
+}
+
+.dark .text-zinc-600,
+.dark .text-zinc-500,
+[data-theme='tactical-dark'] .text-zinc-600,
+[data-theme='tactical-dark'] .text-zinc-500 {
+  color: #9CA3AF !important;
+}
+
+/* Borders */
+.dark .border-black\/\[0\.06\],
+.dark .border-black\/\[0\.05\],
+.dark .border-black\/\[0\.04\],
+.dark .border-black\/5,
+.dark .border-black\/8,
+.dark .border-black\/10,
+.dark .border-black\/20,
+[data-theme='tactical-dark'] .border-black\/\[0\.06\],
+[data-theme='tactical-dark'] .border-black\/\[0\.05\],
+[data-theme='tactical-dark'] .border-black\/\[0\.04\],
+[data-theme='tactical-dark'] .border-black\/5,
+[data-theme='tactical-dark'] .border-black\/8,
+[data-theme='tactical-dark'] .border-black\/10,
+[data-theme='tactical-dark'] .border-black\/20 {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Interactive elements & inputs */
+.dark input,
+.dark select,
+.dark textarea,
+[data-theme='tactical-dark'] input,
+[data-theme='tactical-dark'] select,
+[data-theme='tactical-dark'] textarea {
+  background-color: #161820 !important;
+  color: #F3F4F6 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.dark input::placeholder,
+[data-theme='tactical-dark'] input::placeholder {
+  color: #6B7280 !important;
+}
+
+.dark [class*='hover:bg-zinc-100']:hover,
+[data-theme='tactical-dark'] [class*='hover:bg-zinc-100']:hover {
+  background-color: #232732 !important;
+}
+
+.dark [class*='hover:bg-zinc-50']:hover,
+[data-theme='tactical-dark'] [class*='hover:bg-zinc-50']:hover {
+  background-color: #1A1D25 !important;
+}
+
+/* Tables in Dark Mode */
+.dark th,
+[data-theme='tactical-dark'] th {
+  background-color: #171922 !important;
+  color: #9CA3AF !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark td,
+[data-theme='tactical-dark'] td {
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.dark tr:hover td,
+[data-theme='tactical-dark'] tr:hover td {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* Bento Pastel Cards in Dark Mode */
+.dark .bg-\[\#FEF08A\],
+[data-theme='tactical-dark'] .bg-\[\#FEF08A\] {
+  background-color: #29230C !important;
+  color: #FEF08A !important;
+}
+
+.dark .bg-\[\#FEF08A\] span,
+[data-theme='tactical-dark'] .bg-\[\#FEF08A\] span {
+  color: #FEF08A !important;
+}
+
+.dark .bg-\[\#FBCFE8\],
+.dark .bg-\[\#FCE7F3\],
+[data-theme='tactical-dark'] .bg-\[\#FBCFE8\],
+[data-theme='tactical-dark'] .bg-\[\#FCE7F3\] {
+  background-color: #2F0F1F !important;
+  color: #FBCFE8 !important;
+}
+
+.dark .bg-\[\#BBF7D0\],
+.dark .bg-\[\#DCFCE7\],
+[data-theme='tactical-dark'] .bg-\[\#BBF7D0\],
+[data-theme='tactical-dark'] .bg-\[\#DCFCE7\] {
+  background-color: #0A2616 !important;
+  color: #BBF7D0 !important;
+}
+
+.dark .bg-\[\#BFDBFE\],
+.dark .bg-\[\#DBEAFE\],
+[data-theme='tactical-dark'] .bg-\[\#BFDBFE\],
+[data-theme='tactical-dark'] .bg-\[\#DBEAFE\] {
+  background-color: #0E2038 !important;
+  color: #BFDBFE !important;
+}
