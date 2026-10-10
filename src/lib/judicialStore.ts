@@ -122,9 +122,11 @@ export interface PunishmentRecord {
   judge: string
   type: PunishmentType
   durationMonths: number
+  durationDescription?: string
   fineAmountInr: number
   pronouncementDate: string // YYYY-MM-DD
   operativeText: string
+  operativeOrderSnippet?: string
 }
 
 export interface DocumentRecord {
@@ -530,6 +532,65 @@ class JudicialStoreService {
         }))
         this.notify()
       }
+
+      const { data: supaPunishments } = await supabase.from('punishments').select('*')
+      if (supaPunishments && supaPunishments.length > 0) {
+        this.punishments = supaPunishments.map((sp: any) => ({
+          id: sp.id,
+          caseId: sp.case_id || '',
+          caseNumber: sp.case_number || 'CASE-001',
+          caseTitle: sp.case_title || 'Judicial Proceeding',
+          convictName: sp.convict_name || 'Accused',
+          crimId: sp.crim_id || 'CRIM-001',
+          judge: sp.judge || 'Hon. Justice R. Venkataraman',
+          type: (sp.punishment_type || sp.type || 'RIGOROUS_IMPRISONMENT') as PunishmentType,
+          durationMonths: Number(sp.duration_months || 0),
+          durationDescription: sp.duration_description || (sp.duration_months ? `${sp.duration_months} Months` : 'Statutory Order'),
+          fineAmountInr: Number(sp.fine_amount_inr || 0),
+          pronouncementDate: sp.pronouncement_date || new Date().toISOString().slice(0, 10),
+          operativeText: sp.operative_text || '',
+          operativeOrderSnippet: sp.operative_text || '',
+        }))
+        this.notify()
+      }
+
+      const { data: supaHearings } = await supabase.from('hearings').select('*')
+      if (supaHearings && supaHearings.length > 0) {
+        this.hearings = supaHearings.map((sh: any) => ({
+          id: sh.id,
+          caseId: sh.case_id || '',
+          caseNumber: sh.case_number || '',
+          caseTitle: sh.case_title || '',
+          date: sh.hearing_date || sh.date || new Date().toISOString().slice(0, 10),
+          time: sh.time_slot || sh.time || '10:30',
+          stage: sh.stage || 'Hearing',
+          courtHall: sh.court_hall || 'Hall 04 (Main Sessions)',
+          judge: sh.judge || 'Hon. Justice R. Venkataraman',
+          benchNotes: sh.bench_notes,
+          hasAlarm: Boolean(sh.has_alarm),
+          alarmUrgency: sh.alarm_urgency || 'INFO',
+        }))
+        this.notify()
+      }
+
+      const { data: supaLawyers } = await supabase.from('lawyers').select('*')
+      if (supaLawyers && supaLawyers.length > 0) {
+        this.lawyers = supaLawyers.map((sl: any) => ({
+          id: sl.id,
+          barNumber: sl.bar_number || sl.id,
+          name: sl.name || 'Advocate',
+          chapter: sl.chapter || 'Bar Council of Delhi',
+          enrolmentYear: Number(sl.enrolment_year || 2015),
+          standingYears: Number(sl.standing_years || 10),
+          activeCasesCount: Number(sl.active_cases_count || 1),
+          isParticipatingInBench: sl.is_participating_in_bench ?? true,
+          clearanceStatus: sl.clearance_status || 'VERIFIED',
+          phone: sl.phone || '',
+          email: sl.email || '',
+          chamber: sl.chamber || '',
+        }))
+        this.notify()
+      }
     } catch (e) {
       console.warn('Supabase sync notice:', e)
     }
@@ -799,6 +860,52 @@ class JudicialStoreService {
     }
 
     this.notify()
+
+    if (supabase) {
+      try {
+        createdPunishments.forEach((cp) => {
+          supabase.from('punishments').upsert({
+            id: cp.id,
+            case_id: cp.caseId,
+            case_number: cp.caseNumber,
+            case_title: cp.caseTitle,
+            convict_name: cp.convictName,
+            crim_id: cp.crimId,
+            judge: cp.judge,
+            punishment_type: cp.type,
+            duration_months: cp.durationMonths,
+            fine_amount_inr: cp.fineAmountInr,
+            pronouncement_date: cp.pronouncementDate,
+            operative_text: cp.operativeText,
+            decree_hash: decreeHash,
+          }).then(() => {}).catch(() => {})
+        })
+
+        supabase.from('documents').upsert({
+          id: decreeDoc.id,
+          case_id: decreeDoc.caseId,
+          canonical_name: decreeDoc.canonicalName,
+          original_file_name: decreeDoc.originalFileName,
+          submitting_party: decreeDoc.submittingParty,
+          advocate_or_officer: decreeDoc.advocateOrOfficer,
+          submission_date: decreeDoc.submissionDate,
+          file_size: decreeDoc.fileSize,
+          pages: decreeDoc.pages,
+          kind: decreeDoc.kind,
+          sha256: decreeDoc.sha256,
+          ocr_excerpt: decreeDoc.ocrExcerpt,
+        }).then(() => {}).catch(() => {})
+
+        supabase.from('cases').update({
+          is_closed: true,
+          stage: targetCase.stage,
+          status: targetCase.status,
+        }).eq('id', targetCase.id).then(() => {}).catch(() => {})
+      } catch (e) {
+        console.warn('Supabase closeCase error:', e)
+      }
+    }
+
     return targetCase
   }
 
@@ -1120,6 +1227,28 @@ class JudicialStoreService {
     }
 
     this.notify()
+
+    if (supabase) {
+      try {
+        supabase.from('hearings').upsert({
+          id: newHearing.id,
+          case_id: newHearing.caseId,
+          case_number: newHearing.caseNumber,
+          case_title: newHearing.caseTitle,
+          hearing_date: newHearing.date,
+          time_slot: newHearing.time,
+          stage: newHearing.stage,
+          court_hall: newHearing.courtHall,
+          judge: newHearing.judge,
+          bench_notes: newHearing.benchNotes,
+          has_alarm: newHearing.hasAlarm,
+          alarm_urgency: newHearing.alarmUrgency,
+        }).then(() => {}).catch(() => {})
+      } catch (e) {
+        console.warn('Supabase upsert hearing error:', e)
+      }
+    }
+
     return newHearing
   }
 
@@ -1129,6 +1258,24 @@ class JudicialStoreService {
     this.hearings[idx] = { ...this.hearings[idx], ...updates }
     this.notify()
     return this.hearings[idx]
+  }
+
+  public deleteHearing(id: string): boolean {
+    const prevLen = this.hearings.length
+    this.hearings = this.hearings.filter((h) => h.id !== id)
+    this.alarms = this.alarms.filter((a) => a.hearingId !== id)
+    if (this.hearings.length !== prevLen) {
+      this.notify()
+      if (supabase) {
+        try {
+          supabase.from('hearings').delete().eq('id', id).then(() => {}).catch(() => {})
+        } catch (e) {
+          console.warn('Supabase delete hearing error:', e)
+        }
+      }
+      return true
+    }
+    return false
   }
 
   // --------------------------------------------------------------------------
@@ -1188,6 +1335,81 @@ class JudicialStoreService {
       counts[p.type] = (counts[p.type] || 0) + 1
     })
     return counts
+  }
+
+  public addPunishment(params: {
+    caseId?: string
+    caseNumber: string
+    caseTitle: string
+    convictName: string
+    crimId?: string
+    judge?: string
+    type: PunishmentType
+    durationMonths?: number
+    durationDescription?: string
+    fineAmountInr: number
+    pronouncementDate?: string
+    operativeText: string
+  }): PunishmentRecord {
+    const newPunishment: PunishmentRecord = {
+      id: `pnh-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      caseId: params.caseId || 'manual-docket',
+      caseNumber: params.caseNumber,
+      caseTitle: params.caseTitle,
+      convictName: params.convictName,
+      crimId: params.crimId || `CRIM-${Math.floor(1000 + Math.random() * 9000)}`,
+      judge: params.judge || 'Hon. Justice R. Venkataraman',
+      type: params.type,
+      durationMonths: params.durationMonths || 0,
+      durationDescription: params.durationDescription || (params.durationMonths ? `${params.durationMonths} Months` : 'Statutory Order'),
+      fineAmountInr: params.fineAmountInr || 0,
+      pronouncementDate: params.pronouncementDate || new Date().toISOString().slice(0, 10),
+      operativeText: params.operativeText,
+      operativeOrderSnippet: params.operativeText,
+    }
+
+    this.punishments = [newPunishment, ...this.punishments]
+    this.notify()
+
+    if (supabase) {
+      try {
+        supabase.from('punishments').upsert({
+          id: newPunishment.id,
+          case_id: newPunishment.caseId,
+          case_number: newPunishment.caseNumber,
+          case_title: newPunishment.caseTitle,
+          convict_name: newPunishment.convictName,
+          crim_id: newPunishment.crimId,
+          judge: newPunishment.judge,
+          punishment_type: newPunishment.type,
+          duration_months: newPunishment.durationMonths,
+          fine_amount_inr: newPunishment.fineAmountInr,
+          pronouncement_date: newPunishment.pronouncementDate,
+          operative_text: newPunishment.operativeText,
+        }).then(() => {}).catch(() => {})
+      } catch (e) {
+        console.warn('Supabase upsert punishment error:', e)
+      }
+    }
+
+    return newPunishment
+  }
+
+  public deletePunishment(id: string): boolean {
+    const prevLen = this.punishments.length
+    this.punishments = this.punishments.filter((p) => p.id !== id)
+    if (this.punishments.length !== prevLen) {
+      this.notify()
+      if (supabase) {
+        try {
+          supabase.from('punishments').delete().eq('id', id).then(() => {}).catch(() => {})
+        } catch (e) {
+          console.warn('Supabase delete punishment error:', e)
+        }
+      }
+      return true
+    }
+    return false
   }
 
   // --------------------------------------------------------------------------

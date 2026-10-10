@@ -20,6 +20,7 @@ import {
   ExternalLink,
   User,
   Scale,
+  Trash2,
 } from 'lucide-react'
 import {
   judicialStore,
@@ -598,6 +599,21 @@ export default function Schedule() {
                           >
                             <CalendarIcon className="size-3.5 text-zinc-700" />
                             <span>Adjourn / Edit Note</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm(`Delete hearing listing for ${h.caseNumber} (${h.date} ${h.time})?`)) {
+                                judicialStore.deleteHearing(h.id)
+                                toast('Hearing removed from docket schedule', 'ok')
+                              }
+                            }}
+                            className="px-3.5 py-2.5 rounded-full bg-white text-rose-600 hover:bg-rose-50 border border-rose-200 font-bold text-xs inline-flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+                            title="Remove hearing from schedule"
+                          >
+                            <Trash2 className="size-3.5 text-rose-500" />
+                            <span>Delete</span>
                           </button>
                         </div>
 
