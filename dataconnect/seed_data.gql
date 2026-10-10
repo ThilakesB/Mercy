@@ -1,0 +1,24 @@
+mutation SeedDatabase @transaction {
+  user_insertMany(data: [
+    { fullName: "Alice Judge", role: "Judge", email: "alice@example.com" },
+    { fullName: "Bob Clerk", role: "Clerk", email: "bob@example.com" },
+    { fullName: "Charlie Lawyer", role: "Attorney", email: "charlie@example.com" }
+  ])
+  case_insertMany(data: [
+    { caseNumber: "C001", title: "State vs Doe", status: "Open", filedDate: "2023-01-01" },
+    { caseNumber: "C002", title: "In re Smith", status: "Closed", filedDate: "2023-02-15" },
+    { caseNumber: "C003", title: "City vs Jones", status: "Pending", filedDate: "2023-03-10" }
+  ])
+  judgment_insertMany(data: [
+    { title: "Initial Ruling", content: "Dismissed without prejudice", status: "Draft", updatedAt: "2023-01-10T10:00:00Z", case: { id: "00000000-0000-0000-0000-000000000000" }, author: { id: "00000000-0000-0000-0000-000000000000" } },
+    { title: "Final Order", content: "Judgment for Plaintiff", status: "Final", updatedAt: "2023-02-20T14:30:00Z", case: { id: "00000000-0000-0000-0000-000000000001" }, author: { id: "00000000-0000-0000-0000-000000000000" } }
+  ])
+  documentAttachment_insertMany(data: [
+    { fileName: "complaint.pdf", fileUrl: "gs://docs/c001_comp.pdf", uploadDate: "2023-01-02T09:00:00Z", case: { id: "00000000-0000-0000-0000-000000000000" } },
+    { fileName: "evidence.png", fileUrl: "gs://docs/c003_evid.png", uploadDate: "2023-03-12T11:00:00Z", case: { id: "00000000-0000-0000-0000-000000000002" } }
+  ])
+  task_insertMany(data: [
+    { title: "Review filings", dueDate: "2023-01-05", isCompleted: true, case: { id: "00000000-0000-0000-0000-000000000000" }, assignedTo: { id: "00000000-0000-0000-0000-000000000001" } },
+    { title: "Draft opinion", dueDate: "2023-03-20", isCompleted: false, case: { id: "00000000-0000-0000-0000-000000000002" }, assignedTo: { id: "00000000-0000-0000-0000-000000000000" } }
+  ])
+}

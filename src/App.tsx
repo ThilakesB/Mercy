@@ -23,11 +23,25 @@ import Summary from './pages/Summary'
 import Alerts from './pages/Alerts'
 import Public from './pages/Public'
 import Admin from './pages/Admin'
-import { Button, Card, EmptyState } from './ui'
+import { Button, Card, EmptyState, useApp } from './ui'
+import { Navigate } from 'react-router'
+
+function ProtectedPrint() {
+  const { authed, user, isAuthReady } = useApp()
+  if (!isAuthReady) return null
+  const isEmailAllowed = Boolean(
+    user?.email &&
+    ['thilakesb@gmail.com', 'bthilakes@gmail.com'].includes(user.email.toLowerCase().trim())
+  )
+  if (!authed || !isEmailAllowed) {
+    return <Navigate to="/login" replace />
+  }
+  return <PrintDecree />
+}
 
 const router = createBrowserRouter([
   { path: '/login', Component: Login },
-  { path: '/print/:id', Component: PrintDecree },
+  { path: '/print/:id', Component: ProtectedPrint },
   {
     path: '/',
     Component: Layout,

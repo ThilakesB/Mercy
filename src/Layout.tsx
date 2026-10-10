@@ -255,7 +255,7 @@ function AlarmsDrawer({
 }
 
 export default function Layout() {
-  const { authed, setAuthed, role, theme, setTheme } = useApp()
+  const { authed, setAuthed, user, logout, isAuthReady, role, theme, setTheme } = useApp()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [alarmsOpen, setAlarmsOpen] = useState(false)
   const [, setTick] = useState(0)
@@ -267,7 +267,28 @@ export default function Layout() {
   const alarms = judicialStore.getAlarms()
   const unreadAlarms = alarms.filter((a) => !a.isAcknowledged).length
 
-  if (!authed) {
+  if (!isAuthReady) {
+    return (
+      <div className="min-h-screen bg-[#F7F4EB] flex flex-col items-center justify-center p-6 text-center">
+        <div className="size-14 rounded-2xl bg-[#121316] text-white grid place-items-center shadow-xl animate-pulse">
+          <Scale className="size-7 text-[#FF5C5C]" />
+        </div>
+        <div className="mt-4 font-sans font-bold text-base text-zinc-900 tracking-tight">
+          Verifying Judicial Security Credentials...
+        </div>
+        <div className="text-xs text-zinc-400 font-mono mt-1">
+          Mercy High-Security Terminal · Bench 04
+        </div>
+      </div>
+    )
+  }
+
+  const isEmailAllowed = Boolean(
+    user?.email &&
+    ['thilakesb@gmail.com', 'bthilakes@gmail.com'].includes(user.email.toLowerCase().trim())
+  )
+
+  if (!authed || !isEmailAllowed) {
     return <Navigate to="/login" replace />
   }
 
@@ -283,8 +304,8 @@ export default function Layout() {
           {/* Brand Logo with Coral Pill Dot */}
           <div className="flex items-center justify-between px-2 pt-1">
             <NavLink to="/" className="flex items-center gap-2">
-              <span className="font-extrabold text-xl tracking-tight text-white font-sans lowercase">
-                nyayadesk
+              <span className="font-black text-2xl tracking-tight text-white font-sans">
+                Mercy
               </span>
               <span className="size-2 rounded-full bg-[#FF5C5C]" />
             </NavLink>
@@ -349,12 +370,24 @@ export default function Layout() {
         {/* Bottom Profile / Exit */}
         <div className="border-t border-white/10 pt-4 px-2 space-y-3">
           <div className="flex items-center gap-2.5">
-            <div className="size-8 rounded-full bg-[#FF5C5C] text-white font-bold text-xs grid place-items-center shrink-0">
-              VR
-            </div>
+            {user?.photoURL ? (
+              <img
+                src={user.photoURL}
+                alt={user.name}
+                className="size-8 rounded-full object-cover ring-1 ring-white/20 shrink-0"
+              />
+            ) : (
+              <div className="size-8 rounded-full bg-[#FF5C5C] text-white font-bold text-xs grid place-items-center shrink-0">
+                {user?.name ? user.name.slice(0, 2).toUpperCase() : 'ME'}
+              </div>
+            )}
             <div className="overflow-hidden">
-              <div className="text-xs font-bold text-white truncate">Hon. Justice Venkataraman</div>
-              <div className="text-[10px] text-zinc-400">Bench 04 · Sessions</div>
+              <div className="text-xs font-bold text-white truncate">
+                {user?.name || 'Hon. Judge'}
+              </div>
+              <div className="text-[10px] text-zinc-400 truncate">
+                {user?.email || 'Bench 04 · Sessions'}
+              </div>
             </div>
           </div>
 
@@ -379,8 +412,8 @@ export default function Layout() {
             >
               <Menu className="size-5" />
             </button>
-            <span className="font-black text-lg tracking-tight text-foreground lowercase">
-              nyayadesk
+            <span className="font-black text-xl tracking-tight text-foreground">
+              Mercy
             </span>
           </div>
 
@@ -438,20 +471,46 @@ export default function Layout() {
               )}
             </button>
 
-            {/* Profile Avatar Pill Button (Bigger) */}
-            <NavLink
-              to="/settings"
-              className="flex items-center gap-3 pl-2.5 pr-4.5 py-2 rounded-full bg-white border border-black/10 shadow-sm hover:border-black/25 transition-all cursor-pointer"
-            >
-              <div className="size-9 sm:size-9.5 rounded-full bg-zinc-950 text-white font-black text-xs sm:text-sm grid place-items-center shadow-xs">
-                VR
-              </div>
-              <div className="hidden sm:block text-left">
-                <span className="text-sm font-black text-zinc-900 block leading-tight">
-                  Judge
-                </span>
-              </div>
-            </NavLink>
+            {/* Profile Avatar Pill Button with Google User & Sign Out */}
+            <div className="flex items-center gap-2">
+              <NavLink
+                to="/settings"
+                className="flex items-center gap-3 pl-2 sm:pl-2.5 pr-3.5 sm:pr-4 py-1.5 sm:py-2 rounded-full bg-white border border-black/10 shadow-sm hover:border-black/25 transition-all cursor-pointer"
+                title={user?.email ? `${user.name} (${user.email})` : 'Settings & Profile'}
+              >
+                {user?.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt={user.name}
+                    className="size-8 sm:size-9 rounded-full object-cover ring-1 ring-black/10"
+                  />
+                ) : (
+                  <div className="size-8 sm:size-9 rounded-full bg-zinc-950 text-white font-black text-xs sm:text-sm grid place-items-center shadow-xs">
+                    {user?.name ? user.name.slice(0, 2).toUpperCase() : 'VR'}
+                  </div>
+                )}
+                <div className="hidden sm:block text-left">
+                  <span className="text-xs sm:text-sm font-black text-zinc-900 block leading-tight truncate max-w-[120px]">
+                    {user?.name || 'Judge'}
+                  </span>
+                  <span className="text-[10px] text-zinc-400 font-medium block truncate max-w-[120px]">
+                    {user?.email || 'Sessions Court'}
+                  </span>
+                </div>
+              </NavLink>
+
+              <button
+                type="button"
+                onClick={() => {
+                  logout()
+                  window.location.href = '/login'
+                }}
+                className="grid size-10 sm:size-11 place-items-center rounded-full bg-white border border-black/10 text-zinc-500 hover:text-rose-600 hover:bg-rose-50 shadow-sm hover:border-rose-200 transition-all cursor-pointer"
+                title="Sign out of Bench Terminal"
+              >
+                <LogOut className="size-4.5" />
+              </button>
+            </div>
           </div>
         </header>
 

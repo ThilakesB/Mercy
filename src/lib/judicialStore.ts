@@ -1328,7 +1328,13 @@ const STORAGE_KEYS = {
 function loadFromStorage<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key)
-    if (raw) return JSON.parse(raw) as T
+    if (raw) {
+      const parsed = JSON.parse(raw) as T
+      if (Array.isArray(fallback) && Array.isArray(parsed) && parsed.length === 0 && fallback.length > 0) {
+        return fallback
+      }
+      return parsed
+    }
   } catch (e) {
     console.warn(`Error reading localStorage for ${key}`, e)
   }
@@ -1456,6 +1462,41 @@ class JudicialStoreService {
     this.cases = [newCase, ...this.cases]
     this.notify()
     return newCase
+  }
+
+  public updateCase(caseId: string, updates: Partial<FullCaseRecord>): FullCaseRecord | undefined {
+    const idx = this.cases.findIndex((c) => c.id === caseId)
+    if (idx === -1) return undefined
+    this.cases[idx] = {
+      ...this.cases[idx],
+      ...updates,
+    }
+    if (updates.number || updates.title) {
+      this.hearings.forEach((h) => {
+        if (h.caseId === caseId) {
+          if (updates.number) h.caseNumber = updates.number
+          if (updates.title) h.caseTitle = updates.title
+        }
+      })
+      this.documents.forEach((d) => {
+        if (d.caseId === caseId && updates.number) {
+          d.caseNumber = updates.number
+        }
+      })
+    }
+    this.notify()
+    return this.cases[idx]
+  }
+
+  public deleteCase(caseId: string): boolean {
+    const exists = this.cases.some((c) => c.id === caseId)
+    if (!exists) return false
+    this.cases = this.cases.filter((c) => c.id !== caseId)
+    this.hearings = this.hearings.filter((h) => h.caseId !== caseId)
+    this.documents = this.documents.filter((d) => d.caseId !== caseId)
+    this.alarms = this.alarms.filter((a) => a.caseId !== caseId)
+    this.notify()
+    return true
   }
 
   // --------------------------------------------------------------------------
@@ -1593,6 +1634,49 @@ class JudicialStoreService {
     }
     this.notify()
     return targetCase.checkedDocCategories
+  }
+
+  public addDocument(docData: Omit<DocumentRecord, 'id'>): DocumentRecord {
+    const newDoc: DocumentRecord = {
+      id: `doc-${Date.now()}`,
+      ...docData,
+    }
+    this.documents = [newDoc, ...this.documents]
+    if (docData.caseId || docData.caseNumber) {
+      const targetCase = this.cases.find(
+        (c) => c.id === docData.caseId || c.number === docData.caseNumber
+      )
+      if (targetCase) {
+        targetCase.documents = [newDoc, ...targetCase.documents]
+      }
+    }
+    this.notify()
+    return newDoc
+  }
+
+  public deleteDocument(docId: string): boolean {
+    const exists = this.documents.some((d) => d.id === docId)
+    if (!exists) return false
+    this.documents = this.documents.filter((d) => d.id !== docId)
+    this.cases.forEach((c) => {
+      c.documents = c.documents.filter((d) => d.id !== docId)
+    })
+    this.notify()
+    return true
+  }
+
+  public updateDocument(docId: string, updates: Partial<DocumentRecord>): DocumentRecord | undefined {
+    const idx = this.documents.findIndex((d) => d.id === docId)
+    if (idx === -1) return undefined
+    this.documents[idx] = {
+      ...this.documents[idx],
+      ...updates,
+    }
+    this.cases.forEach((c) => {
+      c.documents = c.documents.map((d) => (d.id === docId ? { ...d, ...updates } : d))
+    })
+    this.notify()
+    return this.documents[idx]
   }
 
   // --------------------------------------------------------------------------

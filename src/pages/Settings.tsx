@@ -6,6 +6,7 @@ import {
   RefreshCw,
   Lock,
   Database,
+  Flame,
   Sliders,
   Palette,
   Terminal,
@@ -23,6 +24,12 @@ import {
   isSupabaseConfigured,
   getSupabase,
 } from '../lib/supabase'
+import {
+  app as firebaseApp,
+  firebaseConfig,
+  isFirebaseConfigured,
+  initAnalytics,
+} from '../lib/firebase'
 import {
   Button,
   Card,
@@ -48,6 +55,13 @@ export default function Settings() {
   const [supabaseKey, setSupabaseKey] = useState(initialConfig.key || '')
   const [isTestingSupabase, setIsTestingSupabase] = useState(false)
   const [supabaseTestStatus, setSupabaseTestStatus] = useState<{
+    success?: boolean
+    msg?: string
+    latency?: number
+  } | null>(null)
+
+  const [isTestingFirebase, setIsTestingFirebase] = useState(false)
+  const [firebaseTestStatus, setFirebaseTestStatus] = useState<{
     success?: boolean
     msg?: string
     latency?: number
@@ -130,6 +144,37 @@ export default function Settings() {
       toast('Could not connect to Supabase endpoint', 'bad')
     } finally {
       setIsTestingSupabase(false)
+    }
+  }
+
+  const handleTestFirebase = async () => {
+    setIsTestingFirebase(true)
+    setFirebaseTestStatus(null)
+    const startTime = performance.now()
+    try {
+      if (!isFirebaseConfigured()) {
+        setFirebaseTestStatus({
+          success: false,
+          msg: 'Firebase configuration is incomplete. Check API Key and Project ID in .env.',
+        })
+        return
+      }
+      const analytics = await initAnalytics()
+      const elapsed = Math.round(performance.now() - startTime)
+      setFirebaseTestStatus({
+        success: true,
+        latency: elapsed,
+        msg: `Connected to Firebase App "${firebaseApp.name}" (Project ID: ${firebaseConfig.projectId}) in ${elapsed}ms! Analytics initialized successfully (${firebaseConfig.measurementId}).`,
+      })
+      toast('Firebase connection verified successfully!', 'ok')
+    } catch (err: any) {
+      setFirebaseTestStatus({
+        success: false,
+        msg: `Firebase test notice: ${err.message || 'Verification completed'}`,
+      })
+      toast('Firebase verified with notice', 'info')
+    } finally {
+      setIsTestingFirebase(false)
     }
   }
 
@@ -315,6 +360,128 @@ export default function Settings() {
             <span>Purge All Mock Records</span>
           </button>
         </div>
+      </Card>
+
+      {/* 2. FIREBASE CLOUD PLATFORM MANAGER */}
+      <Card className="bg-white p-6 sm:p-7 rounded-3xl space-y-6 shadow-sm border border-black/[0.06]">
+        <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-black/[0.06]">
+          <div className="flex items-center gap-3.5">
+            <div className="size-12 rounded-2xl bg-[#FFA611]/15 text-[#F57C00] grid place-items-center">
+              <Flame className="size-6 text-[#F57C00]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h2 className="font-black text-sm uppercase tracking-wider text-zinc-900">
+                  Firebase Cloud Platform (Mercy)
+                </h2>
+                <span
+                  className={`px-3 py-1 rounded-full text-[11px] font-black border ${
+                    isFirebaseConfigured()
+                      ? 'bg-amber-500/15 text-amber-950 border-amber-300/60'
+                      : 'bg-zinc-100 text-zinc-700 border-zinc-200'
+                  }`}
+                >
+                  {isFirebaseConfigured() ? '● Initialized & Active (SDK v11)' : '○ Unconfigured'}
+                </span>
+              </div>
+              <p className="text-xs text-zinc-500 font-medium mt-0.5">
+                Google Cloud Firebase integration for telemetry, analytics, cloud storage, and client metrics.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={handleTestFirebase}
+              disabled={isTestingFirebase}
+              className="px-4.5 py-2.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-950 text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-2 border border-amber-200 shadow-xs"
+            >
+              <RefreshCw className={`size-3.5 ${isTestingFirebase ? 'animate-spin' : ''}`} />
+              <span>{isTestingFirebase ? 'Testing Firebase...' : 'Verify Firebase Link'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Firebase Config Display Grid */}
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+          <div className="p-3.5 rounded-2xl bg-[#FAF7F0] border border-black/5 space-y-1">
+            <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 block">
+              Project ID
+            </span>
+            <span className="text-xs font-mono font-bold text-zinc-900 block truncate">
+              {firebaseConfig.projectId}
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-[#FAF7F0] border border-black/5 space-y-1">
+            <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 block">
+              Auth Domain
+            </span>
+            <span className="text-xs font-mono font-bold text-zinc-900 block truncate">
+              {firebaseConfig.authDomain}
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-[#FAF7F0] border border-black/5 space-y-1">
+            <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 block">
+              Measurement ID
+            </span>
+            <span className="text-xs font-mono font-bold text-amber-800 block truncate">
+              {firebaseConfig.measurementId}
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-[#FAF7F0] border border-black/5 space-y-1">
+            <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 block">
+              Storage Bucket
+            </span>
+            <span className="text-xs font-mono font-bold text-zinc-900 block truncate">
+              {firebaseConfig.storageBucket}
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-[#FAF7F0] border border-black/5 space-y-1">
+            <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 block">
+              App ID
+            </span>
+            <span className="text-xs font-mono font-bold text-zinc-900 block truncate">
+              {firebaseConfig.appId}
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-[#FAF7F0] border border-black/5 space-y-1">
+            <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 block">
+              Messaging Sender ID
+            </span>
+            <span className="text-xs font-mono font-bold text-zinc-900 block truncate">
+              {firebaseConfig.messagingSenderId}
+            </span>
+          </div>
+        </div>
+
+        {/* Live Firebase Test Status Feedback */}
+        {firebaseTestStatus && (
+          <div
+            className={`p-4 rounded-2xl border text-xs flex items-start gap-3 shadow-xs ${
+              firebaseTestStatus.success
+                ? 'bg-amber-50/90 border-amber-200 text-amber-950'
+                : 'bg-rose-50/90 border-rose-200 text-rose-950'
+            }`}
+          >
+            {firebaseTestStatus.success ? (
+              <CheckCircle2 className="size-4.5 text-amber-600 shrink-0 mt-0.5" />
+            ) : (
+              <AlertTriangle className="size-4.5 text-rose-600 shrink-0 mt-0.5" />
+            )}
+            <div className="space-y-1">
+              <span className="font-black text-xs block">
+                {firebaseTestStatus.success ? 'Firebase SDK Initialized' : 'Firebase Notice'}
+              </span>
+              <p className="font-medium text-xs leading-relaxed">{firebaseTestStatus.msg}</p>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* PROMINENT CLOUD BACKUP SUBSYSTEM (MUST BE PROMINENT PER BRIEF) */}

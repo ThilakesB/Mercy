@@ -1,0 +1,119 @@
+mutation CreateCase($data: Case_Data!) @auth(level: USER) {
+  case_insert(data: $data)
+}
+
+mutation UpdateCase($id: UUID!, $data: Case_Data!) @auth(level: USER) {
+  case_update(id: $id, data: $data)
+}
+
+mutation DeleteCase($id: UUID!) @auth(level: USER) {
+  case_delete(id: $id)
+}
+
+query GetCase($id: UUID!) @auth(level: USER) {
+  case(id: $id) {
+    caseNumber title status description
+  }
+}
+
+query ListCases @auth(level: USER) {
+  cases {
+    caseNumber title status
+  }
+}
+
+mutation CreateDocumentAttachment($data: DocumentAttachment_Data!) @auth(level: USER) {
+  documentAttachment_insert(data: $data)
+}
+
+mutation UpdateDocumentAttachment($id: UUID!, $data: DocumentAttachment_Data!) @auth(level: USER) {
+  documentAttachment_update(id: $id, data: $data)
+}
+
+mutation DeleteDocumentAttachment($id: UUID!) @auth(level: USER) {
+  documentAttachment_delete(id: $id)
+}
+
+query GetDocumentAttachment($id: UUID!) @auth(level: USER) {
+  documentAttachment(id: $id) {
+    fileName fileUrl uploadDate
+  }
+}
+
+query ListDocumentAttachments @auth(level: USER) {
+  documentAttachments {
+    fileName fileUrl
+  }
+}
+
+mutation CreateJudgment($data: Judgment_Data!) @auth(level: USER) {
+  judgment_insert(data: $data)
+}
+
+mutation UpdateJudgment($id: UUID!, $data: Judgment_Data!) @auth(level: USER) {
+  judgment_update(id: $id, data: $data)
+}
+
+mutation DeleteJudgment($id: UUID!) @auth(level: USER) {
+  judgment_delete(id: $id)
+}
+
+query GetJudgment($id: UUID!) @auth(level: USER) {
+  judgment(id: $id) {
+    title content status updatedAt
+  }
+}
+
+query ListJudgments @auth(level: USER) {
+  judgments {
+    title status
+  }
+}
+
+mutation CreateTask($data: Task_Data!) @auth(level: USER) {
+  task_insert(data: $data)
+}
+
+mutation UpdateTask($id: UUID!, $data: Task_Data!) @auth(level: USER) {
+  task_update(id: $id, data: $data)
+}
+
+mutation DeleteTask($id: UUID!) @auth(level: USER) {
+  task_delete(id: $id)
+}
+
+query GetTask($id: UUID!) @auth(level: USER) {
+  task(id: $id) {
+    title dueDate isCompleted
+  }
+}
+
+query ListTasks @auth(level: USER) {
+  tasks {
+    title isCompleted
+  }
+}
+
+mutation CreateUser($data: User_Data!) @auth(level: PUBLIC, insecureReason: "Public registration is required for new users") {
+  user_insert(data: $data)
+}
+
+mutation UpdateUser($id: UUID!, $data: User_Data!) @auth(level: USER) {
+  user_update(id: $id, data: $data)
+}
+
+mutation DeleteUser($id: UUID!) @auth(level: USER) {
+  user_delete(id: $id)
+}
+
+query GetUser($id: UUID!) @auth(level: USER) {
+  user(id: $id) {
+    fullName email role
+  }
+}
+
+query ListUsers @auth(level: USER) {
+  users {
+    fullName email
+  }
+}

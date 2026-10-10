@@ -4,16 +4,27 @@ import type { Src, Status } from './data'
 import { statusLabel } from './data'
 
 export type Role = 'Judge' | 'Clerk' | 'Admin'
+export interface UserProfile {
+  name: string
+  email: string
+  photoURL?: string | null
+}
 type Toast = { id: number; msg: string; kind: 'ok' | 'info' | 'bad' }
+
+export const AUTHORIZED_EMAILS = ['thilakesb@gmail.com', 'bthilakes@gmail.com']
 
 interface Ctx {
   role: Role
   setRole: (r: Role) => void
+  user: UserProfile | null
+  setUser: (u: UserProfile | null) => void
+  logout: () => void
   toast: (msg: string, kind?: Toast['kind']) => void
   revealed: boolean
   setRevealed: (v: boolean) => void
   authed: boolean
   setAuthed: (v: boolean) => void
+  isAuthReady: boolean
   theme: 'swiss-light' | 'tactical-dark'
   setTheme: (t: 'swiss-light' | 'tactical-dark') => void
 }
@@ -24,9 +35,106 @@ export const useApp = () => useContext(AppCtx)
 export function AppProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role>('Judge')
   const [revealed, setRevealed] = useState(false)
-  const [authed, setAuthed] = useState(true)
+  const [authed, setAuthedState] = useState<boolean>(false)
+  const [user, setUserState] = useState<UserProfile | null>(null)
+  const [isAuthReady, setIsAuthReady] = useState<boolean>(false)
   const [toasts, setToasts] = useState<Toast[]>([])
   const [theme, setThemeState] = useState<'swiss-light' | 'tactical-dark'>('swiss-light')
+
+  // Real-time Firebase Authentication listener & Strict Email Enforcement
+  useEffect(() => {
+    let unsub = () => {}
+    import('./lib/firebase').then(({ auth, onAuthStateChanged, signOutFromFirebase }) => {
+      unsub = onAuthStateChanged(auth, (fbUser) => {
+        if (fbUser && fbUser.email) {
+          const email = fbUser.email.trim().toLowerCase()
+          if (AUTHORIZED_EMAILS.includes(email)) {
+            const profile: UserProfile = {
+              name: fbUser.displayName || email.split('@')[0],
+              email: fbUser.email,
+              photoURL: fbUser.photoURL,
+            }
+            setAuthedState(true)
+            setUserState(profile)
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('mercy_authed', 'true')
+              localStorage.setItem('mercy_user', JSON.stringify(profile))
+            }
+          } else {
+            // Unwhitelisted account: forcefully sign out and clear credentials
+            signOutFromFirebase().catch(() => {})
+            setAuthedState(false)
+            setUserState(null)
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('mercy_authed')
+              localStorage.removeItem('mercy_user')
+            }
+          }
+        } else {
+          // Check if valid passkey session exists
+          const savedAuthed = typeof window !== 'undefined' ? localStorage.getItem('mercy_authed') : null
+          const savedUserStr = typeof window !== 'undefined' ? localStorage.getItem('mercy_user') : null
+          if (savedAuthed === 'true' && savedUserStr) {
+            try {
+              const parsed = JSON.parse(savedUserStr)
+              if (parsed?.email && AUTHORIZED_EMAILS.includes(parsed.email.toLowerCase().trim())) {
+                setAuthedState(true)
+                setUserState(parsed)
+              } else {
+                setAuthedState(false)
+                setUserState(null)
+                if (typeof window !== 'undefined') {
+                  localStorage.removeItem('mercy_authed')
+                  localStorage.removeItem('mercy_user')
+                }
+              }
+            } catch {
+              setAuthedState(false)
+              setUserState(null)
+            }
+          } else {
+            setAuthedState(false)
+            setUserState(null)
+          }
+        }
+        setIsAuthReady(true)
+      })
+    })
+
+    return () => unsub()
+  }, [])
+
+  const setAuthed = (v: boolean) => {
+    setAuthedState(v)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('mercy_authed', v ? 'true' : 'false')
+    }
+  }
+
+  const setUser = (u: UserProfile | null) => {
+    setUserState(u)
+    if (typeof window !== 'undefined') {
+      if (u) localStorage.setItem('mercy_user', JSON.stringify(u))
+      else {
+        localStorage.removeItem('mercy_user')
+        localStorage.removeItem('nyayadesk_user')
+      }
+    }
+  }
+
+  const logout = () => {
+    setAuthed(false)
+    setUser(null)
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('mercy_authed')
+      localStorage.removeItem('nyayadesk_authed')
+      localStorage.removeItem('mercy_user')
+      localStorage.removeItem('nyayadesk_user')
+    }
+    import('./lib/firebase').then(({ signOutFromFirebase }) => {
+      signOutFromFirebase().catch(() => {})
+    })
+  }
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme === 'tactical-dark' ? 'tactical-dark' : 'swiss-light')
@@ -50,11 +158,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setRole(r)
           if (r !== 'Judge') setRevealed(false)
         },
+        user,
+        setUser,
+        logout,
         toast,
         revealed,
         setRevealed,
         authed,
         setAuthed,
+        isAuthReady,
         theme,
         setTheme,
       }}

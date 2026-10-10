@@ -1,0 +1,38 @@
+type User @table {
+  fullName: String!
+  role: String!
+  email: String!
+}
+
+type Case @table {
+  caseNumber: String!
+  title: String!
+  status: String!
+  filedDate: Date!
+  description: String
+  assignedJudge: User
+}
+
+type Judgment @table {
+  title: String!
+  content: String!
+  status: String!
+  updatedAt: Timestamp!
+  case: Case!
+  author: User!
+}
+
+type DocumentAttachment @table {
+  fileName: String!
+  fileUrl: String!
+  uploadDate: Timestamp!
+  case: Case!
+}
+
+type Task @table {
+  title: String!
+  dueDate: Date!
+  isCompleted: Boolean!
+  case: Case!
+  assignedTo: User!
+}
