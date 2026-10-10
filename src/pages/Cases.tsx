@@ -273,7 +273,7 @@ export default function Cases() {
 
       {/* Cases Table */}
       <Card className="bg-white overflow-hidden">
-        <div className="p-5 border-b border-black/[0.06] flex items-center justify-between">
+        <div className="p-5 border-b border-black/[0.06] flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-xs font-black uppercase tracking-wider text-zinc-900">
               Registered Cases ({rows.length} Recorded)
@@ -282,21 +282,51 @@ export default function Cases() {
               Select any matter to open trial dossier, edit details, or delete docket.
             </p>
           </div>
+          <div className="flex items-center gap-2">
+            {cases.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (window.confirm('Delete all cases from registry and reset?')) {
+                    judicialStore.resetToCleanState()
+                    toast('Registry cleared of all cases', 'ok')
+                  }
+                }}
+                className="text-rose-600 hover:bg-rose-50 border-rose-200 cursor-pointer"
+                title="Delete all cases in registry"
+              >
+                <Trash2 className="size-3.5" />
+                <span>Delete All</span>
+              </Button>
+            )}
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setIsAddCaseOpen(true)}
+              className="cursor-pointer"
+            >
+              <Plus className="size-3.5" />
+              <span>+ Intake Case</span>
+            </Button>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-black/[0.05] bg-[#F7F4EB]/50">
-                <Th>CASE NUMBER</Th>
+              <tr className="border-b border-black/[0.05] bg-[#F7F4EB]/70">
+                <Th className="whitespace-nowrap">CASE NUMBER</Th>
                 <Th>STANDARDIZED CAUSE TITLE</Th>
                 <Th>TYPE</Th>
-                <Th>LEAD IO &amp; POLICE STATION</Th>
+                <Th>LEAD IO &amp; POLICE</Th>
                 <Th>SECTIONS CITED</Th>
                 <Th>TRIAL STAGE</Th>
                 <Th>NEXT HEARING</Th>
                 <Th>STATUS</Th>
-                <Th>ACTIONS</Th>
+                <Th className="sticky right-0 bg-[#FAF7F0] shadow-[-6px_0_12px_rgba(0,0,0,0.06)] border-l border-black/[0.06] z-20 text-center font-extrabold text-rose-700">
+                  ACTIONS (DELETE / EDIT)
+                </Th>
               </tr>
             </thead>
             <tbody>
@@ -318,18 +348,29 @@ export default function Cases() {
                 </tr>
               ) : (
                 rows.map((c) => (
-                  <tr key={c.id} className="hover:bg-[#F7F4EB]/30 transition-colors border-b border-black/[0.04]">
+                  <tr key={c.id} className="hover:bg-[#F7F4EB]/30 transition-colors border-b border-black/[0.04] group">
                     <Td className="whitespace-nowrap">
-                      <Link
-                        to={`/cases/${c.id}`}
-                        className="font-black text-xs text-[#FF5C5C] hover:underline"
-                      >
-                        {c.number}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to={`/cases/${c.id}`}
+                          className="font-black text-xs text-[#FF5C5C] hover:underline"
+                        >
+                          {c.number}
+                        </Link>
+                        {/* Quick Delete Trash Button directly in the first column */}
+                        <button
+                          type="button"
+                          onClick={() => setDeletingCase(c)}
+                          className="p-1 rounded-full text-zinc-300 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                          title={`Delete case ${c.number}`}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
                     </Td>
 
                     <Td>
-                      <div className="font-extrabold text-xs text-zinc-900 max-w-sm truncate">
+                      <div className="font-extrabold text-xs text-zinc-900 max-w-xs truncate" title={c.title}>
                         {c.title}
                       </div>
                       <div className="text-[11px] text-zinc-400 font-medium mt-0.5">
@@ -344,13 +385,13 @@ export default function Cases() {
                     </Td>
 
                     <Td className="text-xs">
-                      <div className="font-bold text-zinc-900">{c.io.name}</div>
-                      <div className="text-[11px] text-zinc-400 font-medium truncate max-w-xs">
+                      <div className="font-bold text-zinc-900 truncate max-w-44">{c.io.name}</div>
+                      <div className="text-[11px] text-zinc-400 font-medium truncate max-w-44">
                         {c.policeStation}
                       </div>
                     </Td>
 
-                    <Td className="text-[11px] text-zinc-600 font-medium max-w-xs truncate">
+                    <Td className="text-[11px] text-zinc-600 font-medium max-w-40 truncate">
                       {c.acts.join(', ')}
                     </Td>
 
@@ -374,31 +415,36 @@ export default function Cases() {
                       )}
                     </Td>
 
-                    <Td className="whitespace-nowrap">
-                      <div className="flex items-center gap-1.5">
+                    {/* Prominent, Sticky Actions Column with Red Delete Button */}
+                    <Td className="sticky right-0 bg-white group-hover:bg-[#FAF7F0] shadow-[-6px_0_12px_rgba(0,0,0,0.06)] border-l border-black/[0.06] z-10 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5 justify-end">
+                        {/* Prominent Red Delete Button with label */}
+                        <button
+                          type="button"
+                          onClick={() => setDeletingCase(c)}
+                          className="px-2.5 py-1.5 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 font-bold text-xs inline-flex items-center gap-1 border border-rose-200 transition-colors cursor-pointer shadow-2xs"
+                          title="Delete Case from registry"
+                        >
+                          <Trash2 className="size-3.5 text-rose-600" />
+                          <span>Delete</span>
+                        </button>
+
                         {/* Edit Button */}
                         <button
                           type="button"
                           onClick={() => openEditModal(c)}
-                          className="p-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 hover:text-black transition-colors cursor-pointer"
+                          className="p-1.5 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 hover:text-black transition-colors cursor-pointer"
                           title="Edit Case"
                         >
                           <Edit2 className="size-3.5" />
                         </button>
 
-                        {/* Delete Button */}
-                        <button
-                          type="button"
-                          onClick={() => setDeletingCase(c)}
-                          className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer"
-                          title="Delete Case"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </button>
-
                         {/* Dossier Button */}
                         <Link to={`/cases/${c.id}`}>
-                          <button className="px-3 py-1.5 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold cursor-pointer transition-colors inline-flex items-center gap-1">
+                          <button
+                            type="button"
+                            className="px-3 py-1.5 rounded-full bg-[#121316] hover:bg-black text-white text-xs font-bold cursor-pointer transition-colors inline-flex items-center gap-1 shadow-xs"
+                          >
                             Dossier
                             <ArrowRight className="size-3" />
                           </button>
