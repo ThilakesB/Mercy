@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-import { AlertCircle, AlertTriangle, CheckCircle2, FileText, Inbox, Info, Sparkles, X, XCircle } from 'lucide-react'
+import { AlertCircle, AlertTriangle, CheckCircle2, FileText, Info, Sparkles, X, XCircle } from 'lucide-react'
 import type { Src, Status } from './data'
 import { statusLabel } from './data'
 
@@ -14,6 +14,8 @@ interface Ctx {
   setRevealed: (v: boolean) => void
   authed: boolean
   setAuthed: (v: boolean) => void
+  theme: 'swiss-light' | 'tactical-dark'
+  setTheme: (t: 'swiss-light' | 'tactical-dark') => void
 }
 
 const AppCtx = createContext<Ctx>(null as unknown as Ctx)
@@ -24,11 +26,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [revealed, setRevealed] = useState(false)
   const [authed, setAuthed] = useState(true)
   const [toasts, setToasts] = useState<Toast[]>([])
+  const [theme, setThemeState] = useState<'swiss-light' | 'tactical-dark'>('swiss-light')
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme === 'tactical-dark' ? 'tactical-dark' : 'swiss-light')
+  }, [theme])
+
+  const setTheme = (t: 'swiss-light' | 'tactical-dark') => {
+    setThemeState(t)
+  }
 
   const toast = useCallback((msg: string, kind: Toast['kind'] = 'ok') => {
     const id = Date.now() + Math.random()
     setToasts((t) => [...t, { id, msg, kind }])
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3800)
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4000)
   }, [])
 
   return (
@@ -44,23 +55,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setRevealed,
         authed,
         setAuthed,
+        theme,
+        setTheme,
       }}
     >
       {children}
-      <div className="fixed bottom-5 right-5 z-[100] flex flex-col gap-2" role="status" aria-live="polite">
+      <div className="fixed bottom-5 right-5 z-[100] flex flex-col gap-2 font-sans" role="status" aria-live="polite">
         {toasts.map((t) => (
           <div
             key={t.id}
-            className="slidein flex max-w-sm items-start gap-3 rounded-lg border border-border bg-elevated px-4 py-3 text-sm text-foreground shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
+            className="slidein flex max-w-sm items-center gap-3 rounded-2xl border border-black/8 bg-white/95 backdrop-blur-md px-4 py-3 text-xs text-zinc-900 shadow-xl"
           >
             {t.kind === 'ok' ? (
-              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-ok" />
+              <span className="grid size-6 place-items-center rounded-full bg-emerald-100 text-emerald-700 font-bold text-[11px] shrink-0">✓</span>
             ) : t.kind === 'bad' ? (
-              <XCircle className="mt-0.5 size-4 shrink-0 text-bad" />
+              <span className="grid size-6 place-items-center rounded-full bg-rose-100 text-rose-700 font-bold text-[11px] shrink-0">!</span>
             ) : (
-              <Info className="mt-0.5 size-4 shrink-0 text-accent" />
+              <span className="grid size-6 place-items-center rounded-full bg-amber-100 text-amber-700 font-bold text-[11px] shrink-0">i</span>
             )}
-            <span className="text-xs leading-relaxed">{t.msg}</span>
+            <span className="font-medium leading-relaxed">{t.msg}</span>
           </div>
         ))}
       </div>
@@ -76,38 +89,31 @@ export function Button({
   className,
   ...p
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'outline' | 'ghost' | 'danger' | 'gold' | 'amber' | 'blue' | 'emerald' | 'purple' | 'cyan'
-  size?: 'sm' | 'md'
+  variant?: 'primary' | 'outline' | 'ghost' | 'danger' | 'hazard' | 'secondary' | 'coral'
+  size?: 'sm' | 'md' | 'lg'
 }) {
   const v = {
-    primary:
-      'bg-black text-white font-semibold hover:bg-zinc-800 shadow-sm active:scale-[0.98]',
-    blue:
-      'bg-black text-white font-semibold hover:bg-zinc-800 shadow-sm active:scale-[0.98]',
-    emerald:
-      'bg-zinc-900 text-white font-semibold hover:bg-black shadow-sm active:scale-[0.98]',
-    purple:
-      'bg-zinc-900 text-white hover:bg-black border border-zinc-800 active:scale-[0.98]',
-    gold:
-      'bg-black text-white font-semibold hover:bg-zinc-800 shadow-sm active:scale-[0.98]',
-    amber:
-      'border border-zinc-300 bg-zinc-100 text-black hover:bg-zinc-200 active:scale-[0.98]',
-    cyan:
-      'bg-zinc-100 text-black hover:bg-zinc-200 border border-zinc-300 active:scale-[0.98]',
-    danger:
-      'border border-black bg-black text-white font-semibold hover:bg-zinc-800 active:scale-[0.98]',
-    outline:
-      'border border-zinc-300 bg-white text-black hover:bg-zinc-100 hover:border-zinc-400 active:scale-[0.98]',
-    ghost:
-      'text-zinc-600 hover:text-black hover:bg-zinc-100 active:scale-[0.98]',
+    primary: 'bg-[#141518] text-white hover:bg-black font-semibold shadow-sm active:scale-[0.98]',
+    hazard: 'bg-[#FF5C5C] text-white hover:bg-[#EE4B4B] font-semibold shadow-sm active:scale-[0.98]',
+    coral: 'bg-[#FF5C5C] text-white hover:bg-[#EE4B4B] font-semibold shadow-sm active:scale-[0.98]',
+    danger: 'bg-[#FF5C5C] text-white hover:bg-[#EE4B4B] font-semibold shadow-sm active:scale-[0.98]',
+    secondary: 'bg-[#F0EDE4] text-zinc-900 hover:bg-[#E5E1D5] font-semibold active:scale-[0.98]',
+    outline: 'border border-black/10 bg-white text-zinc-900 hover:bg-zinc-50 font-semibold active:scale-[0.98] shadow-xs',
+    ghost: 'text-zinc-600 hover:text-black hover:bg-black/5 font-medium',
   }[variant]
+
+  const s = {
+    sm: 'h-8 px-3.5 text-xs rounded-full',
+    md: 'h-9.5 px-4.5 text-xs rounded-full',
+    lg: 'h-11 px-6 text-sm rounded-full',
+  }[size]
 
   return (
     <button
       {...p}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-lg font-medium whitespace-nowrap transition-all duration-150 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40',
-        size === 'sm' ? 'h-8 px-3 text-xs' : 'h-9 px-4 text-xs font-semibold',
+        'inline-flex items-center justify-center gap-2 cursor-pointer transition-all duration-150 select-none disabled:cursor-not-allowed disabled:opacity-40 whitespace-nowrap',
+        s,
         v,
         className,
       )}
@@ -118,25 +124,19 @@ export function Button({
 export function Card({
   className,
   children,
-  line,
   ...p
 }: React.HTMLAttributes<HTMLElement> & {
   className?: string
   children: ReactNode
-  line?: boolean
 }) {
   return (
     <section
       {...p}
       className={cn(
-        'relative rounded-xl border border-border bg-card text-card-foreground transition-colors',
-        line && 'overflow-hidden',
+        'rounded-3xl border border-black/[0.06] bg-white text-card-foreground card-shadow transition-all',
         className,
       )}
     >
-      {line && (
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-      )}
       {children}
     </section>
   )
@@ -154,17 +154,17 @@ export function CardHeader({
   num?: string
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/80 px-5 py-3.5">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/[0.05] px-6 py-4.5">
       <div>
-        <h2 className="font-serif text-[15px] font-semibold text-foreground tracking-tight flex items-center">
+        <h2 className="text-sm font-bold tracking-tight text-foreground flex items-center gap-2">
           {num && (
-            <span className="mr-2 font-mono text-[10px] text-muted-foreground font-normal border border-border px-1.5 py-0.5 rounded">
+            <span className="grid size-5.5 place-items-center rounded-full bg-zinc-100 text-zinc-600 text-[10px] font-bold">
               {num}
             </span>
           )}
-          {title}
+          <span>{title}</span>
         </h2>
-        {sub && <p className="mt-0.5 text-xs text-muted-foreground leading-normal">{sub}</p>}
+        {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
       </div>
       {action}
     </div>
@@ -181,41 +181,34 @@ export function PageHeader({
   actions?: ReactNode
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-border/80 pb-5">
+    <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
       <div>
-        <div className="mb-2 flex items-center gap-2">
-          <span className="size-1.5 rounded-full bg-accent" />
-          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-            Chennai Judicial Registry · Court 04
-          </span>
-        </div>
-        <h1 className="font-serif text-2xl md:text-3xl font-medium tracking-tight text-foreground">
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground">
           {title}
         </h1>
-        {sub && <p className="mt-1 max-w-2xl text-xs md:text-sm text-muted-foreground">{sub}</p>}
+        {sub && <p className="mt-1 text-xs md:text-sm text-muted-foreground max-w-3xl leading-relaxed">{sub}</p>}
       </div>
-      <div className="flex flex-wrap items-center gap-2">{actions}</div>
+      <div className="flex flex-wrap items-center gap-2.5">{actions}</div>
     </div>
   )
 }
 
 export function StatusChip({ s }: { s: Status }) {
   const m = {
-    ontrack: ['bg-zinc-100 text-zinc-800 border-zinc-300', CheckCircle2, 'bg-zinc-600'],
-    warning: ['bg-zinc-200 text-zinc-900 border-zinc-400', AlertTriangle, 'bg-zinc-800'],
-    overdue: ['bg-black text-white border-black font-bold', AlertCircle, 'bg-white'],
+    ontrack: ['bg-emerald-50 text-emerald-700 border-emerald-200/60', 'On track'],
+    warning: ['bg-amber-50 text-amber-700 border-amber-200/60', 'Warning'],
+    overdue: ['bg-rose-50 text-rose-700 border-rose-200/60 font-bold', 'Overdue'],
   } as const
-  const [cls, Icon, dot] = m[s]
+  const [cls, label] = m[s]
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10.5px] font-semibold border uppercase tracking-wider',
+        'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold border',
         cls,
       )}
     >
-      <span className={cn('size-1.5 rounded-full shrink-0', dot)} />
-      <Icon className="size-3 shrink-0" aria-hidden />
-      {statusLabel[s]}
+      <span className="size-1.5 rounded-full bg-current" />
+      {label}
     </span>
   )
 }
@@ -230,7 +223,7 @@ export function Tag({
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded border border-border bg-muted px-2 py-0.5 text-xs font-medium text-foreground',
+        'inline-flex items-center rounded-full border border-black/8 bg-zinc-100/80 px-3 py-1 text-xs font-semibold text-zinc-800',
         className,
       )}
     >
@@ -241,9 +234,9 @@ export function Tag({
 
 export function AIBadge() {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded border border-black/10 bg-black/[0.04] px-2 py-0.5 text-[11px] font-medium text-zinc-700">
-      <Sparkles className="size-3 text-black" aria-hidden />
-      AI-generated · Source linked
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-pink-200 bg-pink-50 px-3 py-1 text-[11px] font-bold text-pink-700">
+      <Sparkles className="size-3 text-pink-500" aria-hidden />
+      AI Precedent Assistant
     </span>
   )
 }
@@ -252,12 +245,12 @@ export function Citation({ src }: { src: Src }) {
   const { toast } = useApp()
   return (
     <button
-      onClick={() => toast(`Opening ${src.doc}, page ${src.page}`, 'info')}
-      className="inline-flex items-center gap-1.5 rounded border border-border bg-muted/60 px-2 py-0.5 font-mono text-[11px] text-zinc-700 transition-colors hover:border-black hover:text-black"
+      onClick={() => toast(`Opening docket: ${src.doc}, page ${src.page}`, 'info')}
+      className="inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-zinc-50 px-3 py-1 text-[11px] font-medium text-zinc-800 hover:border-black transition-colors cursor-pointer"
     >
-      <FileText className="size-3 text-black shrink-0" aria-hidden />
+      <FileText className="size-3 text-zinc-500 shrink-0" aria-hidden />
       <span>{src.doc}</span>
-      <span className="text-muted-foreground">p.{src.page}</span>
+      <span className="text-zinc-400">p.{src.page}</span>
     </button>
   )
 }
@@ -267,7 +260,7 @@ export function Input(p: React.InputHTMLAttributes<HTMLInputElement>) {
     <input
       {...p}
       className={cn(
-        'h-9 w-full rounded-lg border border-border bg-white px-3 text-xs text-foreground placeholder:text-muted-foreground/70 transition-all focus:border-black focus:bg-white',
+        'h-10 w-full rounded-2xl border border-black/10 bg-white px-4 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 transition-all focus:border-black focus:ring-2 focus:ring-black/5',
         p.className,
       )}
     />
@@ -283,7 +276,7 @@ export function Select({
     <select
       {...p}
       className={cn(
-        'h-9 rounded-lg border border-border bg-white px-3 text-xs text-foreground transition-all focus:border-black focus:bg-white',
+        'h-10 rounded-2xl border border-black/10 bg-white px-4 text-xs font-medium text-foreground transition-all focus:border-black cursor-pointer',
         className,
       )}
     >
@@ -303,11 +296,11 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+      <span className="mb-1.5 block text-xs font-bold text-foreground">
         {label}
       </span>
       {children}
-      {hint && <span className="mt-1 block text-xs text-muted-foreground">{hint}</span>}
+      {hint && <span className="mt-1 block text-[11px] text-muted-foreground">{hint}</span>}
     </label>
   )
 }
@@ -322,7 +315,7 @@ export function Tabs({
   onChange: (t: string) => void
 }) {
   return (
-    <div role="tablist" className="flex gap-1 overflow-x-auto border-b border-border/80">
+    <div role="tablist" className="flex gap-2 overflow-x-auto p-1.5 bg-[#EFECE3]/70 rounded-full">
       {tabs.map((t) => (
         <button
           key={t}
@@ -330,10 +323,10 @@ export function Tabs({
           aria-selected={value === t}
           onClick={() => onChange(t)}
           className={cn(
-            '-mb-px whitespace-nowrap border-b-2 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer',
+            'whitespace-nowrap px-4 py-1.5 text-xs font-bold rounded-full transition-all cursor-pointer',
             value === t
-              ? 'border-accent text-foreground'
-              : 'border-transparent text-muted-foreground hover:text-foreground',
+              ? 'bg-white text-zinc-900 shadow-sm'
+              : 'text-zinc-600 hover:text-black hover:bg-white/40',
           )}
         >
           {t}
@@ -359,14 +352,14 @@ export function Switch({
       aria-label={label}
       onClick={() => onChange(!checked)}
       className={cn(
-        'relative h-5 w-9 shrink-0 rounded-full transition-colors cursor-pointer',
-        checked ? 'bg-accent' : 'bg-[#272b35]',
+        'h-6.5 w-12 rounded-full p-1 transition-colors cursor-pointer',
+        checked ? 'bg-[#FF5C5C]' : 'bg-zinc-300',
       )}
     >
-      <span
+      <div
         className={cn(
-          'absolute top-0.5 size-4 rounded-full bg-white shadow-sm transition-all',
-          checked ? 'left-[18px]' : 'left-0.5',
+          'size-4.5 rounded-full bg-white shadow-sm transition-transform',
+          checked ? 'translate-x-5.5' : 'translate-x-0',
         )}
       />
     </button>
@@ -378,58 +371,38 @@ export function Modal({
   onClose,
   title,
   children,
-  footer,
+  size = 'md',
 }: {
   open: boolean
   onClose: () => void
   title: string
   children: ReactNode
-  footer: ReactNode
+  size?: 'sm' | 'md' | 'lg' | 'xl'
 }) {
-  useEffect(() => {
-    if (!open) return
-    const h = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', h)
-    return () => window.removeEventListener('keydown', h)
-  }, [open, onClose])
-
   if (!open) return null
+  const sz = {
+    sm: 'max-w-md',
+    md: 'max-w-xl',
+    lg: 'max-w-3xl',
+    xl: 'max-w-5xl',
+  }[size]
+
   return (
-    <div className="fixed inset-0 z-[90] grid place-items-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onClick={(e) => e.stopPropagation()}
-        className="slidein w-full max-w-md rounded-xl border border-border bg-white shadow-2xl"
-      >
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="font-serif text-base font-semibold text-foreground">{title}</h2>
-          <button onClick={onClose} aria-label="Close" className="rounded p-1 hover:bg-zinc-100 cursor-pointer">
-            <X className="size-4 text-muted-foreground" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+      <div className={cn('w-full rounded-3xl border border-black/10 bg-white text-card-foreground shadow-2xl slidein overflow-hidden', sz)}>
+        <div className="flex items-center justify-between border-b border-black/[0.06] px-6 py-4.5">
+          <h3 className="text-sm font-bold text-foreground">
+            {title}
+          </h3>
+          <button
+            onClick={onClose}
+            className="grid size-8 place-items-center rounded-full bg-zinc-100 text-zinc-500 hover:bg-zinc-200 hover:text-black transition-colors cursor-pointer"
+          >
+            <X className="size-4" />
           </button>
         </div>
-        <div className="px-5 py-4 text-xs leading-relaxed text-muted-foreground">{children}</div>
-        <div className="flex justify-end gap-2 border-t border-border px-5 py-3">{footer}</div>
+        <div className="max-h-[85vh] overflow-y-auto p-6">{children}</div>
       </div>
-    </div>
-  )
-}
-
-export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn('skeleton', className)} />
-}
-
-export function PageSkeleton() {
-  return (
-    <div aria-busy="true" aria-label="Loading" className="space-y-6">
-      <Skeleton className="h-8 w-64" />
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        {[...Array(5)].map((_, i) => (
-          <Skeleton key={i} className="h-24" />
-        ))}
-      </div>
-      <Skeleton className="h-64" />
     </div>
   )
 }
@@ -438,71 +411,70 @@ export function EmptyState({
   title,
   text,
   action,
-  icon,
 }: {
   title: string
-  text: string
+  text?: string
   action?: ReactNode
-  icon?: ReactNode
 }) {
   return (
-    <div className="grid place-items-center px-6 py-14 text-center">
-      <div className="mb-3 grid size-10 place-items-center rounded-full border border-border bg-muted text-muted-foreground">
-        {icon ?? <Inbox className="size-4" />}
+    <div className="grid place-items-center p-12 text-center">
+      <div className="mb-3 grid size-12 place-items-center rounded-full bg-zinc-100 text-zinc-400">
+        <FileText className="size-6" />
       </div>
-      <h3 className="font-serif text-base font-semibold text-foreground">{title}</h3>
-      <p className="mt-1 max-w-sm text-xs text-muted-foreground leading-relaxed">{text}</p>
+      <div className="text-sm font-bold text-foreground">{title}</div>
+      {text && <p className="mt-1 max-w-md text-xs text-muted-foreground">{text}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   )
 }
 
-export function ErrorState({ onRetry }: { onRetry: () => void }) {
+export function Th({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
   return (
-    <EmptyState
-      icon={<AlertTriangle className="size-4 text-bad" />}
-      title="Court registry connection failed"
-      text="The case registry service did not respond. Your records remain secure. Please retry."
-      action={<Button onClick={onRetry}>Retry connection</Button>}
-    />
+    <th
+      className={cn(
+        'border-b border-black/[0.06] bg-zinc-50/70 px-5 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-muted-foreground',
+        className,
+      )}
+    >
+      {children}
+    </th>
   )
 }
 
-export function useLoad(ms = 400) {
-  const [loading, setLoading] = useState(true)
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), ms)
-    return () => clearTimeout(t)
-  }, [ms])
-  return loading
+export function Td({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <td
+      className={cn(
+        'border-b border-black/[0.04] px-5 py-3.5 text-xs font-medium text-foreground',
+        className,
+      )}
+    >
+      {children}
+    </td>
+  )
 }
 
-export const Th = ({
-  children,
-  className,
-}: {
-  children?: ReactNode
-  className?: string
-}) => (
-  <th
-    scope="col"
-    className={cn(
-      'whitespace-nowrap border-b border-border bg-[#10131a] px-4 py-2.5 text-left font-mono text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground',
-      className,
-    )}
-  >
-    {children}
-  </th>
-)
+export function Skeleton({ className }: { className?: string }) {
+  return <div className={cn('animate-pulse rounded-2xl bg-zinc-200/70', className)} />
+}
 
-export const Td = ({
-  children,
-  className,
-}: {
-  children?: ReactNode
-  className?: string
-}) => (
-  <td className={cn('border-b border-border px-4 py-3 align-top text-xs', className)}>
-    {children}
-  </td>
-)
+export function useLoad(delayMs = 250) {
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), delayMs)
+    return () => clearTimeout(t)
+  }, [delayMs])
+  return loading
+}

@@ -1,881 +1,544 @@
-import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router'
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
-import {
-  AlertOctagon,
-  CalendarClock,
-  Clock3,
+  Search,
   Gavel,
-  Hourglass,
-  ArrowRight,
-  ShieldAlert,
-  Sparkles,
-  FileSpreadsheet,
-  PlusCircle,
-  GitBranch,
+  Calendar,
   AlertTriangle,
-  Scale,
-  Zap,
-  Briefcase,
-  User,
+  Clock,
   Shield,
-  FileCheck2,
+  Sparkles,
+  ArrowRight,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle2,
+  Crosshair,
+  User,
+  Activity,
+  Heart,
+  Scale,
+  FileText,
 } from 'lucide-react'
 import {
-  ageBuckets,
-  alerts,
-  cases,
-  causeList,
-  delayReasons,
-  findCase,
-  kpis,
-  priorityQueue,
-  TODAY_LABEL,
-  type Status,
-} from '../data'
+  judicialStore,
+  type CriminalRecord,
+  type FullCaseRecord,
+  type HearingRecord,
+} from '../lib/judicialStore'
 import {
   Button,
   Card,
   CardHeader,
-  cn,
-  ErrorState,
-  PageHeader,
-  PageSkeleton,
-  StatusChip,
   Tag,
+  StatusChip,
   useApp,
-  useLoad,
 } from '../ui'
 
-const tipStyle = {
-  contentStyle: {
-    background: '#121316',
-    border: '1px solid rgba(255, 255, 255, 0.15)',
-    borderRadius: '8px',
-    fontSize: '11px',
-    color: '#f4f4f6',
-    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.7)',
-    padding: '6px 10px',
-  },
-  itemStyle: {
-    color: '#f4f4f6',
-  },
-}
-
-// Stage breakdown data for the pendency pipeline (Monochrome scale)
-const stagePendency = [
-  { stage: 'Investigation & FIR', count: 312, pct: 24.3, avgDays: 42, bottleneck: false },
-  { stage: 'Framing of Charges', count: 245, pct: 19.1, avgDays: 68, bottleneck: false },
-  { stage: 'Witness Deposition & Evidence', count: 480, pct: 37.4, avgDays: 194, bottleneck: true },
-  { stage: 'Final Arguments', count: 158, pct: 12.3, avgDays: 55, bottleneck: false },
-  { stage: 'Reserved for Judgment', count: 89, pct: 6.9, avgDays: 21, bottleneck: false },
-]
-
-// Category breakdown data (Monochrome scale)
-const categoryPendency = [
-  { name: 'Criminal Sessions', count: 702, pct: 54.7, desc: 'BNS & IPC Matters' },
-  { name: 'Matrimonial & Family', count: 241, pct: 18.8, desc: 'Custody & Mediation' },
-  { name: 'POCSO Special Court', count: 188, pct: 14.6, desc: 'Fast-Track In-Camera' },
-  { name: 'Civil & Commercial', count: 153, pct: 11.9, desc: 'Injunctions & Suits' },
-]
-
-// Charge categories for visual case grouping
-const chargeCategories = [
-  { label: 'All Bench Charges', count: 8, filter: '' },
-  { label: 'Robbery & Arms Act', count: 1, filter: 'Arms' },
-  { label: 'Child Protection (POCSO)', count: 2, filter: 'POCSO' },
-  { label: 'Murder & Homicide', count: 1, filter: '103' },
-  { label: 'Financial Fraud & Cheating', count: 1, filter: '318' },
-  { label: 'Narcotics (NDPS)', count: 1, filter: 'NDPS' },
-  { label: 'Family & Matrimonial', count: 2, filter: 'HMA' },
-]
-
-function Kpi({
-  label,
-  value,
-  context,
-  icon: Icon,
-  variant = 'default',
-}: {
-  label: string
-  value: number
-  context?: string
-  icon: typeof Gavel
-  variant?: 'default' | 'bad' | 'warn' | 'ok' | 'blue'
-}) {
-  const styles = {
-    default: 'border-border bg-card text-foreground',
-    bad: 'border-white/40 bg-zinc-900 text-white shadow-[0_0_15px_rgba(255,255,255,0.06)]',
-    warn: 'border-white/25 bg-zinc-900/90 text-zinc-200',
-    ok: 'border-white/20 bg-zinc-900/60 text-zinc-200',
-    blue: 'border-white/20 bg-zinc-900/80 text-zinc-100',
-  }[variant]
-
-  return (
-    <div className={cn('rounded-xl border p-4 transition-all duration-150', styles)}>
-      <div className="flex items-center justify-between text-muted-foreground">
-        <span className="font-mono text-[10.5px] uppercase tracking-wider">{label}</span>
-        <Icon className="size-4 text-zinc-300" />
-      </div>
-      <div className="mt-2 font-serif text-3xl font-semibold tracking-tight tabular-nums text-foreground">
-        {value.toLocaleString('en-IN')}
-      </div>
-      {context && (
-        <div className="mt-1 font-mono text-[10px] text-muted-foreground flex items-center gap-1">
-          {context}
-        </div>
-      )}
-    </div>
-  )
-}
-
 export default function Dashboard() {
-  const loading = useLoad()
-  const [sp] = useSearchParams()
-  const { role, toast } = useApp()
-  const [pendencyMode, setPendencyMode] = useState<'stage' | 'category' | 'aging'>('stage')
-  const [selectedFilter, setSelectedFilter] = useState<string | null>(null)
-  const [selectedCharge, setSelectedCharge] = useState('All Bench Charges')
-  const [alertFilter, setAlertFilter] = useState<'all' | Status>('all')
+  const { toast } = useApp()
+  const navigate = useNavigate()
+  const [, setTick] = useState(0)
 
-  if (loading) return <PageSkeleton />
-  if (sp.get('state') === 'error')
-    return <ErrorState onRetry={() => (window.location.href = '/')} />
+  useEffect(() => {
+    return judicialStore.subscribe(() => setTick((t) => t + 1))
+  }, [])
 
-  const totalPending = kpis.pending
+  const cases = judicialStore.getCases()
+  const hearings = judicialStore.getHearings()
+  const criminals = judicialStore.getCriminals()
 
-  // Filter priority queue based on interactive selection
-  const filteredPriority = selectedFilter
-    ? priorityQueue.filter((p) => {
-        const c = findCase(p.caseId)
-        if (!c) return false
-        if (selectedFilter === 'POCSO') return c.type === 'POCSO'
-        if (selectedFilter === 'Criminal') return c.type === 'Criminal'
-        if (selectedFilter === 'Matrimonial') return c.type === 'Matrimonial'
-        if (selectedFilter === 'Evidence') return c.stage.toLowerCase().includes('evidence') || c.stage.toLowerCase().includes('trial')
-        if (selectedFilter === 'Overdue') return p.severity === 'overdue'
-        return true
-      })
-    : priorityQueue
+  // Selected case for the bottom preview card
+  const [selectedCaseId, setSelectedCaseId] = useState<string>(cases[0]?.id || '')
+  const selectedCase = cases.find((c) => c.id === selectedCaseId) || cases[0]
 
-  // Filter cases for the visual case matrix by statutory charge
-  const displayedCases = selectedCharge === 'All Bench Charges'
-    ? cases
-    : cases.filter((cs) => {
-        const match = chargeCategories.find((c) => c.label === selectedCharge)
-        if (!match || !match.filter) return true
-        return (
-          cs.acts.some((a) => a.includes(match.filter)) ||
-          cs.type.includes(match.filter) ||
-          cs.number.includes(match.filter)
-        )
-      })
+  // Calendar day state
+  const [selectedCalendarDay, setSelectedCalendarDay] = useState<number>(12)
+
+  // Today's Date (2026-10-12)
+  const todayDateStr = '2026-10-12'
+  const todayHearings = hearings.filter((h) => h.date === todayDateStr)
 
   return (
-    <>
-      <PageHeader
-        title={role === 'Judge' ? 'Good morning, Your Honour' : 'Sessions Court Bench Dashboard'}
-        sub={`${TODAY_LABEL} · Principal Sessions Court, Chennai (Courtroom 04) · Mercy Decision Support`}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Link to="/summary">
-              <Button variant="primary" size="sm">
-                <Sparkles className="size-3.5" /> AI Case Digest
-              </Button>
-            </Link>
-            <Link to="/cases">
-              <Button variant="outline" size="sm">
-                <PlusCircle className="size-3.5" /> View All Cases
-              </Button>
-            </Link>
-            <Link to="/timeline">
-              <Button variant="outline" size="sm">
-                <GitBranch className="size-3.5" /> Master Timeline Tree
-              </Button>
-            </Link>
-            <Link to="/alerts">
-              <Button variant="danger" size="sm">
-                <AlertOctagon className="size-3.5" /> 108 Overdue
-              </Button>
-            </Link>
-          </div>
-        }
-      />
-
-      {/* 1. EXECUTIVE PENDENCY VISUALIZER (Monochrome Theme) */}
-      <Card line className="mb-6 p-5 md:p-6 bg-card border-border">
-        {/* Top Header Strip with Live Metrics and Perspective Switcher */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-border/80 pb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="size-2 rounded-full bg-white animate-pulse" />
-              <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                Judicial Pendency Visualizer · Principal Sessions Roster
-              </span>
-            </div>
-            <div className="flex flex-wrap items-baseline gap-3 mt-1">
-              <h2 className="font-serif text-2xl font-bold text-foreground">
-                1,284 Cases Pending Adjudication
-              </h2>
-              <span className="font-mono text-xs text-muted-foreground">
-                (76% On-Schedule · 16% Under Notice · 8% Critical Delay)
-              </span>
-            </div>
-          </div>
-
-          {/* Perspective View Switcher Buttons (Monochrome) */}
-          <div className="flex items-center gap-1.5 rounded-lg border border-border bg-[#0d0e11] p-1">
-            <button
-              onClick={() => { setPendencyMode('stage'); setSelectedFilter(null) }}
-              className={cn(
-                'px-3.5 py-1.5 rounded font-mono text-xs transition-colors cursor-pointer',
-                pendencyMode === 'stage'
-                  ? 'bg-white text-black font-semibold shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              By Procedural Stage
-            </button>
-            <button
-              onClick={() => { setPendencyMode('category'); setSelectedFilter(null) }}
-              className={cn(
-                'px-3.5 py-1.5 rounded font-mono text-xs transition-colors cursor-pointer',
-                pendencyMode === 'category'
-                  ? 'bg-white text-black font-semibold shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              By Roster Category
-            </button>
-            <button
-              onClick={() => { setPendencyMode('aging'); setSelectedFilter(null) }}
-              className={cn(
-                'px-3.5 py-1.5 rounded font-mono text-xs transition-colors cursor-pointer',
-                pendencyMode === 'aging'
-                  ? 'bg-white text-black font-semibold shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              By Pendency Aging
-            </button>
-          </div>
+    <div className="space-y-6">
+      {/* 1. Welcoming Hero Banner (Matching Image 2 "Good morning, Dr. Olivia") */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
+            Good morning, Hon. Justice Venkataraman
+          </h1>
+          <p className="mt-1 text-xs md:text-sm text-zinc-500 max-w-2xl">
+            NyayaDesk wishes you a fair and decisive day. 14 judicial matters are listed for your bench today. You also have 3 statutory compliance events on calendar.
+          </p>
         </div>
-
-        {/* PERSPECTIVE 1: BY PROCEDURAL STAGE (Where cases are stuck) */}
-        {pendencyMode === 'stage' && (
-          <div className="mt-5 space-y-4">
-            <div className="flex items-center justify-between text-xs text-muted-foreground font-mono">
-              <span>Judicial Stage Pipeline Flow (1,284 Matters Distributed Across 5 Statutory Stages)</span>
-              <span className="text-zinc-200 font-semibold flex items-center gap-1 border border-white/20 bg-white/5 px-2 py-0.5 rounded">
-                <AlertTriangle className="size-3" /> Major Bottleneck: Witness Examination (480 cases)
-              </span>
-            </div>
-
-            {/* Stage Flow Interactive Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-              {stagePendency.map((st, idx) => {
-                const isSelected = selectedFilter === (idx === 2 ? 'Evidence' : null)
-                return (
-                  <div
-                    key={st.stage}
-                    onClick={() => {
-                      if (idx === 2) setSelectedFilter(selectedFilter === 'Evidence' ? null : 'Evidence')
-                    }}
-                    className={cn(
-                      'p-3.5 rounded-xl border transition-all cursor-pointer relative overflow-hidden',
-                      st.bottleneck
-                        ? 'border-white/40 bg-zinc-900/90 hover:border-white hover:bg-zinc-800'
-                        : 'border-border bg-[#0d0e11] hover:border-border-hover hover:bg-[#131418]',
-                      isSelected && 'ring-2 ring-white border-transparent',
-                    )}
-                  >
-                    <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                      <span>Stage 0{idx + 1}</span>
-                      <span className="font-semibold text-foreground">{st.pct}%</span>
-                    </div>
-
-                    <div className="mt-2 font-serif text-2xl font-bold text-foreground tabular-nums">
-                      {st.count}
-                    </div>
-
-                    <div className="mt-1 text-xs font-semibold text-foreground line-clamp-1">
-                      {st.stage}
-                    </div>
-
-                    <div className="mt-2 flex items-center justify-between font-mono text-[10px] text-muted-foreground">
-                      <span>Avg: {st.avgDays} days</span>
-                      {st.bottleneck && (
-                        <span className="px-1.5 py-0.5 rounded bg-white text-black font-semibold">
-                          Chokepoint
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Monochrome Progress Fill Line */}
-                    <div className="mt-2.5 h-1.5 w-full bg-white/[0.08] rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-300 bg-white"
-                        style={{ width: `${(st.count / 480) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* PERSPECTIVE 2: BY ROSTER CATEGORY */}
-        {pendencyMode === 'category' && (
-          <div className="mt-5 space-y-4">
-            <div className="flex items-center justify-between text-xs text-muted-foreground font-mono">
-              <span>Jurisdictional Bench Breakdown</span>
-              <span>Total Active Docket: 1,284 Matters</span>
-            </div>
-
-            {/* Monochrome Segmented Proportional Bar */}
-            <div className="h-3.5 w-full rounded-md bg-[#131418] border border-border flex overflow-hidden">
-              <div
-                style={{ width: `${(702 / totalPending) * 100}%` }}
-                className="bg-white hover:brightness-90 transition-all cursor-pointer"
-                title="Criminal: 702 cases"
-                onClick={() => setSelectedFilter(selectedFilter === 'Criminal' ? null : 'Criminal')}
-              />
-              <div
-                style={{ width: `${(241 / totalPending) * 100}%` }}
-                className="bg-zinc-400 hover:brightness-110 transition-all cursor-pointer"
-                title="Matrimonial: 241 cases"
-                onClick={() => setSelectedFilter(selectedFilter === 'Matrimonial' ? null : 'Matrimonial')}
-              />
-              <div
-                style={{ width: `${(188 / totalPending) * 100}%` }}
-                className="bg-zinc-600 hover:brightness-125 transition-all cursor-pointer"
-                title="POCSO Special: 188 cases"
-                onClick={() => setSelectedFilter(selectedFilter === 'POCSO' ? null : 'POCSO')}
-              />
-              <div
-                style={{ width: `${(153 / totalPending) * 100}%` }}
-                className="bg-zinc-800 hover:brightness-150 transition-all cursor-pointer"
-                title="Civil: 153 cases"
-              />
-            </div>
-
-            {/* Category Cards (Monochrome) */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {categoryPendency.map((cat) => {
-                const isSelected = selectedFilter === (cat.name.includes('Criminal') ? 'Criminal' : cat.name.includes('POCSO') ? 'POCSO' : cat.name.includes('Matrimonial') ? 'Matrimonial' : null)
-                return (
-                  <div
-                    key={cat.name}
-                    onClick={() => {
-                      if (cat.name.includes('Criminal')) setSelectedFilter(selectedFilter === 'Criminal' ? null : 'Criminal')
-                      else if (cat.name.includes('POCSO')) setSelectedFilter(selectedFilter === 'POCSO' ? null : 'POCSO')
-                      else if (cat.name.includes('Matrimonial')) setSelectedFilter(selectedFilter === 'Matrimonial' ? null : 'Matrimonial')
-                    }}
-                    className={cn(
-                      'p-3.5 rounded-xl border transition-all cursor-pointer',
-                      isSelected
-                        ? 'border-white bg-zinc-900 ring-1 ring-white/50'
-                        : 'border-border bg-[#0d0e11] hover:border-border-hover hover:bg-[#131418]',
-                    )}
-                  >
-                    <div className="flex items-center justify-between font-mono text-[10.5px] uppercase tracking-wider text-muted-foreground">
-                      <span>{cat.name.split(' ')[0]}</span>
-                      <span className="text-foreground font-semibold">{cat.pct}%</span>
-                    </div>
-                    <div className="mt-1 font-serif text-2xl font-bold text-white tabular-nums">
-                      {cat.count}
-                    </div>
-                    <div className="font-mono text-[10.5px] text-muted-foreground mt-0.5 truncate">
-                      {cat.desc}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* PERSPECTIVE 3: BY AGING & STATUTORY LIMITATION */}
-        {pendencyMode === 'aging' && (
-          <div className="mt-5 space-y-4">
-            <div className="flex items-center justify-between text-xs text-muted-foreground font-mono">
-              <span>Statutory Limitation & Pendency Duration Distribution</span>
-              <span className="text-white font-semibold">108 Matters Exceeding 2-Year Statutory Norm</span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3.5 rounded-xl border border-white/10 bg-[#0d0e11]">
-                <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Under 90 Days</span>
-                <div className="mt-1 font-serif text-2xl font-bold text-white tabular-nums">412</div>
-                <div className="font-mono text-[10px] text-muted-foreground mt-0.5">Fresh Filings (32.1%)</div>
-              </div>
-              <div className="p-3.5 rounded-xl border border-white/15 bg-[#0d0e11]">
-                <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-300">90 - 365 Days</span>
-                <div className="mt-1 font-serif text-2xl font-bold text-white tabular-nums">577</div>
-                <div className="font-mono text-[10px] text-muted-foreground mt-0.5">Trial Active (44.9%)</div>
-              </div>
-              <div className="p-3.5 rounded-xl border border-white/25 bg-[#0d0e11]">
-                <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-200">1 - 2 Years</span>
-                <div className="mt-1 font-serif text-2xl font-bold text-white tabular-nums">187</div>
-                <div className="font-mono text-[10px] text-muted-foreground mt-0.5">Extended Trial (14.6%)</div>
-              </div>
-              <div
-                onClick={() => setSelectedFilter(selectedFilter === 'Overdue' ? null : 'Overdue')}
-                className={cn(
-                  'p-3.5 rounded-xl border border-white/50 bg-zinc-900 cursor-pointer transition-all hover:bg-zinc-850',
-                  selectedFilter === 'Overdue' && 'ring-2 ring-white',
-                )}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-[10px] uppercase tracking-wider text-white font-semibold">Over 2 Years</span>
-                  <span className="px-1.5 py-0.2 rounded bg-white text-black font-mono text-[9px] font-bold">Critical</span>
-                </div>
-                <div className="mt-1 font-serif text-2xl font-bold text-white tabular-nums">108</div>
-                <div className="font-mono text-[10px] text-zinc-400 mt-0.5">Statutory Audit Flag (8.4%)</div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Action Ribbon with Monochrome High-Impact Buttons */}
-        <div className="mt-5 pt-4 border-t border-border/80 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            {selectedFilter && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-xs bg-white text-black font-semibold">
-                Filter: <strong>{selectedFilter}</strong>
-                <button onClick={() => setSelectedFilter(null)} className="ml-1 hover:opacity-70 font-bold cursor-pointer">✕</button>
-              </span>
-            )}
-            <span className="font-mono text-xs text-muted-foreground">
-              Direct Registry Interventions:
-            </span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => toast('Witness summons expedite notices generated for 480 pending matters', 'ok')}
-            >
-              <Zap className="size-3.5" /> Auto-Expedite Summons (480)
+        <div className="flex items-center gap-2">
+          <Link to="/cases/new">
+            <Button variant="primary" size="md">
+              <Plus className="size-4" />
+              <span>Intake New Case</span>
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => toast('142 FSL Forensic Lab compliance reminders dispatched to Crime Branch', 'info')}
-            >
-              <FileSpreadsheet className="size-3.5" /> FSL Forensic Notices (142)
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => toast('Chief Justice High Court Pendency Census exported to PDF', 'ok')}
-            >
-              <Scale className="size-3.5" /> Export Pendency Census
-            </Button>
-            <Link to="/timeline">
-              <Button variant="outline" size="sm">
-                <GitBranch className="size-3.5" /> Open Visual Tree
-              </Button>
-            </Link>
-          </div>
+          </Link>
         </div>
-      </Card>
+      </div>
 
-      {/* 2. ALL COURT CASES: VISUAL DOCKET CLASSIFIED BY STATUTORY CHARGE */}
-      <Card line className="mb-6 p-5 md:p-6 bg-card border-border">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-border/80 pb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <Scale className="size-4 text-white" />
-              <h2 className="font-serif text-xl font-bold text-foreground">
-                All Courtroom Cases: Visual Docket Classified by Statutory Charge
-              </h2>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Click any case to inspect its complete roadmap: investigating officer, victim, accused, police evidence, and target hearing.
-            </p>
-          </div>
-
-          {/* Statutory Charge Filter Tabs */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            {chargeCategories.map((cat) => (
-              <button
-                key={cat.label}
-                onClick={() => setSelectedCharge(cat.label)}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg font-mono text-xs transition-all cursor-pointer',
-                  selectedCharge === cat.label
-                    ? 'bg-white text-black font-semibold shadow-sm'
-                    : 'bg-[#0d0e11] text-muted-foreground hover:text-foreground border border-border hover:border-white/30',
-                )}
-              >
-                {cat.label} ({cat.count})
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Visual Case Grid */}
-        <div className="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          {displayedCases.map((cs) => {
-            const crim = cs.type !== 'Matrimonial'
-            const actsLabel = cs.acts.length > 0 ? cs.acts.join(', ') : 'Special Act Filing'
-            const ioLabel = cs.io || 'Insp. S. Murugan (Anna Nagar)'
-            const station = cs.policeStation || 'Principal Sessions Court'
-
-            return (
-              <div
-                key={cs.id}
-                className="p-4 rounded-xl border border-white/15 bg-[#0d0e11] hover:border-white/40 transition-all flex flex-col justify-between group shadow-sm"
-              >
+      {/* 2. Main 3-Column Layout: Left Bento & Lists (2 cols) + Right Calendar & Timeline (1 col) */}
+      <div className="grid gap-6 xl:grid-cols-[2fr_1fr]">
+        {/* Left Column: 4 Pastel Bento Metric Cards + Cases & Dossier Lists */}
+        <div className="space-y-6">
+          {/* 4 Pastel Bento Cards (Matching Image 2) */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* Bento Card 1: Warm Yellow (Hearings Summary & Bar Graph) */}
+            <div className="relative overflow-hidden rounded-3xl bg-[#FEF08A] p-5.5 text-amber-950 transition-all hover:shadow-md">
+              <div className="flex items-center justify-between font-bold text-sm">
+                <span>Today's Hearings:</span>
+                <span className="text-xs bg-amber-200/80 px-2.5 py-0.5 rounded-full font-semibold">14 Listed</span>
+              </div>
+              <div className="mt-3 flex items-baseline gap-4 text-xs font-semibold">
                 <div>
-                  {/* Top Bar with Number and Tag */}
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs font-bold text-white px-2 py-0.5 rounded bg-zinc-900 border border-white/20">
-                      {cs.number}
-                    </span>
-                    <StatusChip s={cs.status} />
-                  </div>
-
-                  {/* Statutory Penal Charges Badge */}
-                  <div className="mt-2.5">
-                    <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground block mb-0.5">
-                      Statutory Charge:
-                    </span>
-                    <div className="inline-block px-2 py-0.5 rounded bg-white text-black font-mono text-xs font-bold">
-                      {actsLabel}
-                    </div>
-                  </div>
-
-                  {/* Title */}
-                  <h3 className="mt-2 font-serif text-sm font-bold text-foreground line-clamp-1 group-hover:text-white transition-colors">
-                    {cs.title}
-                  </h3>
-
-                  {/* Parties & Entities Preview */}
-                  <div className="mt-3 pt-2.5 border-t border-white/10 space-y-1.5 text-xs text-muted-foreground">
-                    <div className="flex items-start gap-1.5">
-                      <User className="size-3 text-zinc-400 mt-0.5 shrink-0" />
-                      <div className="truncate">
-                        <span className="text-zinc-400 font-mono text-[10px]">Accused:</span>{' '}
-                        <strong className="text-white">
-                          {cs.accused.length > 0 ? cs.accused[0].name : cs.parties[1]?.name || 'Accused Person'}
-                        </strong>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-1.5">
-                      <Shield className="size-3 text-zinc-400 mt-0.5 shrink-0" />
-                      <div className="truncate">
-                        <span className="text-zinc-400 font-mono text-[10px]">Victim:</span>{' '}
-                        <strong className="text-zinc-200">
-                          {cs.victims.list.length > 0 ? cs.victims.list[0].masked : cs.parties[2]?.name || 'Complainant'}
-                        </strong>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-1.5">
-                      <Briefcase className="size-3 text-zinc-400 mt-0.5 shrink-0" />
-                      <div className="truncate">
-                        <span className="text-zinc-400 font-mono text-[10px]">IO:</span>{' '}
-                        <span className="text-zinc-300">{ioLabel}</span>
-                      </div>
-                    </div>
-                  </div>
+                  <span className="text-lg font-black block">8</span>
+                  <span className="text-[11px] opacity-75">Forenoon</span>
                 </div>
-
-                {/* Bottom Action Footer */}
-                <div className="mt-4 pt-3 border-t border-white/10 space-y-2">
-                  <div className="flex items-center justify-between font-mono text-[10.5px]">
-                    <span className="text-muted-foreground">{cs.stage}</span>
-                    <span className="text-white font-semibold">{cs.nextHearing}</span>
-                  </div>
-
-                  <Link to={`/cases/${cs.id}?tab=Case+Roadmap+Flowchart`}>
-                    <Button variant="primary" size="sm" className="w-full text-xs">
-                      Open Case Roadmap Flowchart <ArrowRight className="size-3" />
-                    </Button>
-                  </Link>
+                <div>
+                  <span className="text-lg font-black block">6</span>
+                  <span className="text-[11px] opacity-75">Afternoon</span>
+                </div>
+                <div>
+                  <span className="text-lg font-black block">2</span>
+                  <span className="text-[11px] opacity-75">POCSO In-Camera</span>
                 </div>
               </div>
-            )
-          })}
-        </div>
-      </Card>
 
-      {/* 3. KPI METRIC TILES */}
-      <div className="mb-6 grid grid-cols-2 gap-3.5 lg:grid-cols-5">
-        <Kpi
-          label="Pending Matters"
-          value={kpis.pending}
-          context="Full court roster"
-          icon={Hourglass}
-          variant="default"
-        />
-        <Kpi
-          label="Hearings Today"
-          value={kpis.today}
-          context="6 on morning roll"
-          icon={Gavel}
-          variant="ok"
-        />
-        <Kpi
-          label="Statutory Overdue"
-          value={kpis.overdue}
-          context="Immediate judicial review"
-          icon={AlertOctagon}
-          variant="bad"
-        />
-        <Kpi
-          label="Deadlines (7 Days)"
-          value={kpis.deadlines7}
-          context="FSL reports due"
-          icon={CalendarClock}
-          variant="warn"
-        />
-        <Kpi
-          label="Idle (30+ Days)"
-          value={kpis.inactive30}
-          context="Remand extension check"
-          icon={Clock3}
-          variant="default"
-        />
-      </div>
-
-      {/* 4. BENTO: PRIORITY REVIEW QUEUE & TODAY'S CAUSE LIST */}
-      <div className="mb-6 grid gap-6 xl:grid-cols-[1.35fr_1fr]">
-        <Card line>
-          <CardHeader
-            num="01"
-            title={selectedFilter ? `Priority Queue (${selectedFilter} Filter Applied)` : "Priority Judicial Review Queue"}
-            sub="Ranked by statutory limitation period and inactivity index."
-            action={
-              selectedFilter ? (
-                <Button variant="outline" size="sm" onClick={() => setSelectedFilter(null)}>
-                  Clear Filter
-                </Button>
-              ) : (
-                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-white/20 bg-white/10 text-white font-mono text-[10.5px] font-semibold">
-                  <ShieldAlert className="size-3" />
-                  Statutory Audit Flagged
-                </span>
-              )
-            }
-          />
-          <ol className="divide-y divide-border/60">
-            {filteredPriority.map((p, i) => {
-              const c = findCase(p.caseId)!
-              return (
-                <li key={p.caseId}>
-                  <Link
-                    to={`/cases/${c.id}?tab=Case+Roadmap+Flowchart`}
-                    className="flex items-start gap-4 px-5 py-3.5 hover:bg-white/[0.04] transition-colors"
-                  >
-                    <span className="mt-0.5 font-mono text-xs font-semibold text-zinc-300">
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-2">
-                        <span className="font-mono text-xs text-foreground font-semibold">
-                          {c.number}
-                        </span>
-                        <span className="rounded border border-border bg-[#141519] px-1.5 py-0.2 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
-                          {c.type}
-                        </span>
-                      </span>
-                      <span className="mt-0.5 block text-xs font-medium text-foreground truncate">
-                        {c.title}
-                      </span>
-                      <span className="mt-0.5 block text-xs text-muted-foreground leading-normal">
-                        {p.reason}
-                      </span>
-                    </span>
-                    <StatusChip s={p.severity} />
-                  </Link>
-                </li>
-              )
-            })}
-          </ol>
-        </Card>
-
-        <Card>
-          <CardHeader
-            num="02"
-            title="Today's Cause List"
-            sub="6 scheduled hearings on the morning roll."
-            action={
-              <Link
-                to="/cases"
-                className="font-mono text-xs text-white hover:underline flex items-center gap-1 font-semibold"
-              >
-                All 14 hearings <ArrowRight className="size-3" />
-              </Link>
-            }
-          />
-          <ul className="divide-y divide-border/60">
-            {causeList.map((h) => {
-              const c = findCase(h.caseId)!
-              return (
-                <li
-                  key={h.time}
-                  className="flex items-center gap-3.5 px-5 py-3 hover:bg-white/[0.04] transition-colors"
-                >
-                  <span className="w-14 shrink-0 font-mono text-xs font-semibold text-white">
-                    {h.time}
-                  </span>
-                  <Link to={`/cases/${c.id}?tab=Case+Roadmap+Flowchart`} className="min-w-0 flex-1 hover:underline">
-                    <span className="block truncate font-mono text-xs text-foreground font-medium">
-                      {c.number}
-                    </span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {h.stage}
-                    </span>
-                  </Link>
-                  <span className="text-[10px] font-mono text-muted-foreground shrink-0 border border-border px-1.5 py-0.5 rounded">
-                    Court 04
-                  </span>
-                </li>
-              )
-            })}
-          </ul>
-        </Card>
-      </div>
-
-      {/* 5. VISUAL CHARTS: AGE BUCKETS & DELAY BOTTLENECKS (Monochrome) */}
-      <div className="mb-6 grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader
-            title="Pendency Duration Buckets"
-            sub="Roster breakdown by how long matters have been registered"
-          />
-          <div className="h-64 px-2 py-3" role="img" aria-label="Bar chart of pending cases by age">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={ageBuckets}>
-                <CartesianGrid stroke="rgba(255, 255, 255, 0.05)" vertical={false} />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 11, fill: '#8a8d98' }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 11, fill: '#8a8d98' }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={34}
-                />
-                <Tooltip {...tipStyle} cursor={{ fill: 'rgba(255, 255, 255, 0.04)' }} />
-                <Bar dataKey="cases" fill="#ffffff" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="px-5 pb-3 font-mono text-[11px] text-muted-foreground flex justify-between border-t border-border/60 pt-2">
-            <span>&lt; 90 Days: 412 (32%)</span>
-            <span>1-2 Years: 187 (15%)</span>
-            <span className="text-white font-semibold">2+ Years: 108 (8%)</span>
-          </div>
-        </Card>
-
-        <Card>
-          <CardHeader
-            title="Primary Bottlenecks Causing Delay"
-            sub="Recorded procedural impediments from court diary logs"
-          />
-          <div
-            className="h-64 px-2 py-3"
-            role="img"
-            aria-label="Horizontal bar chart of delay reasons"
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={delayReasons} layout="vertical">
-                <CartesianGrid stroke="rgba(255, 255, 255, 0.05)" horizontal={false} />
-                <XAxis
-                  type="number"
-                  tick={{ fontSize: 11, fill: '#8a8d98' }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  dataKey="reason"
-                  type="category"
-                  tick={{ fontSize: 11, fill: '#8a8d98' }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={140}
-                />
-                <Tooltip {...tipStyle} cursor={{ fill: 'rgba(255, 255, 255, 0.04)' }} />
-                <Bar dataKey="cases" fill="#a1a1aa" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="px-5 pb-3 font-mono text-[11px] text-muted-foreground border-t border-border/60 pt-2 flex items-center justify-between">
-            <span>Primary Cause: Forensic Ballistics Backlog</span>
-            <span className="text-zinc-200 font-medium">38% of all recorded delays</span>
-          </div>
-        </Card>
-      </div>
-
-      {/* 6. BENCH PROCEDURAL ALERTS */}
-      <Card line>
-        <CardHeader
-          title="Bench Procedural Alerts"
-          sub="Statutory compliance notices generated from case lifecycle tracking"
-          action={
-            <div className="flex items-center gap-1">
-              {(['all', 'overdue', 'warning', 'ontrack'] as const).map((s) => (
-                <Button
-                  key={s}
-                  size="sm"
-                  variant={alertFilter === s ? 'primary' : 'outline'}
-                  onClick={() => setAlertFilter(s)}
-                >
-                  {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
-                </Button>
-              ))}
+              {/* Mini rounded bar chart visualization */}
+              <div className="mt-5 flex items-end justify-between gap-1.5 h-16 pt-2">
+                {[30, 45, 75, 95, 60, 40, 20].map((h, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                    <div
+                      className={`w-full rounded-full transition-all ${
+                        i === 3 ? 'bg-amber-950' : 'bg-amber-900/25'
+                      }`}
+                      style={{ height: `${h}%` }}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 flex justify-between text-[10px] opacity-70 font-medium">
+                <span>10:00 a.m.</span>
+                <span>12:30 p.m.</span>
+                <span>04:30 p.m.</span>
+              </div>
             </div>
-          }
-        />
-        <ul className="divide-y divide-border/60">
-          {alerts
-            .filter((a) => alertFilter === 'all' || a.sev === alertFilter)
-            .map((a) => (
-              <li
-                key={a.id}
-                className="flex items-start justify-between gap-4 px-5 py-3.5 hover:bg-white/[0.02] transition-colors"
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className={cn(
-                      'mt-0.5 size-2 rounded-full shrink-0',
-                      a.sev === 'overdue'
-                        ? 'bg-white ring-2 ring-white/40'
-                        : a.sev === 'warning'
-                          ? 'bg-zinc-400'
-                          : 'bg-zinc-600',
-                    )}
+
+            {/* Bento Card 2: Soft Pink (Disposal Rate & Curve) */}
+            <div className="relative overflow-hidden rounded-3xl bg-[#FBCFE8] p-5.5 text-pink-950 transition-all hover:shadow-md">
+              <div className="flex items-center justify-between font-bold text-sm">
+                <span>Disposal &amp; Closure:</span>
+                <span className="text-xs bg-pink-200/80 px-2.5 py-0.5 rounded-full font-semibold">92% On-Time</span>
+              </div>
+              <div className="mt-3 flex items-baseline gap-4 text-xs font-semibold">
+                <div>
+                  <span className="text-lg font-black block">24 min</span>
+                  <span className="text-[11px] opacity-75">Avg Duration</span>
+                </div>
+                <div>
+                  <span className="text-lg font-black block">3 Cases</span>
+                  <span className="text-[11px] opacity-75">Judgment Reserved</span>
+                </div>
+                <div>
+                  <span className="text-lg font-black block">100%</span>
+                  <span className="text-[11px] opacity-75">Cloud Synced</span>
+                </div>
+              </div>
+
+              {/* Smooth trend curve SVG */}
+              <div className="mt-4 relative h-16">
+                <svg className="w-full h-full overflow-visible" viewBox="0 0 200 60" fill="none">
+                  <path
+                    d="M 0,45 Q 35,50 70,30 T 140,20 T 200,38"
+                    stroke="#831843"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    fill="none"
                   />
+                  {/* Highlighted point */}
+                  <circle cx="140" cy="20" r="4.5" fill="#831843" />
+                  <line x1="140" y1="20" x2="140" y2="60" stroke="#831843" strokeDasharray="3 3" opacity="0.5" />
+                </svg>
+              </div>
+              <div className="mt-1 flex justify-between text-[10px] opacity-70 font-medium">
+                <span>10:30</span>
+                <span>11:30</span>
+                <span>12:00</span>
+                <span>13:30</span>
+              </div>
+            </div>
+
+            {/* Bento Card 3: Fresh Sage Green (Categories) */}
+            <div className="relative overflow-hidden rounded-3xl bg-[#BBF7D0] p-5.5 text-emerald-950 transition-all hover:shadow-md">
+              <div className="flex items-center justify-between font-bold text-sm">
+                <span>By Case Category:</span>
+                <span className="text-xs bg-emerald-200/80 px-2.5 py-0.5 rounded-full font-semibold">Active Roster</span>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-xs font-semibold">
+                <div>
+                  <span className="text-lg font-black block">702</span>
+                  <span className="text-[10.5px] opacity-75">Criminal BNS</span>
+                </div>
+                <div>
+                  <span className="text-lg font-black block">188</span>
+                  <span className="text-[10.5px] opacity-75">POCSO Court</span>
+                </div>
+                <div>
+                  <span className="text-lg font-black block">241</span>
+                  <span className="text-[10.5px] opacity-75">Family / Civil</span>
+                </div>
+              </div>
+
+              <div className="mt-5 flex gap-1.5 text-[10.5px] font-bold">
+                <span className="bg-emerald-900/10 px-2.5 py-1 rounded-full">14 IN TRIAL</span>
+                <span className="bg-emerald-900/10 px-2.5 py-1 rounded-full">5 EVIDENCE</span>
+                <span className="bg-emerald-900/10 px-2.5 py-1 rounded-full">2 BAIL</span>
+              </div>
+            </div>
+
+            {/* Bento Card 4: Soft Sky Blue (Session Stats) */}
+            <div className="relative overflow-hidden rounded-3xl bg-[#BFDBFE] p-5.5 text-blue-950 transition-all hover:shadow-md">
+              <div className="flex items-center justify-between font-bold text-sm">
+                <span>Bench Session Allocation:</span>
+                <span className="text-xs bg-blue-200/80 px-2.5 py-0.5 rounded-full font-semibold">Today</span>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-xs font-semibold">
+                <div>
+                  <span className="text-lg font-black block">04:30 h</span>
+                  <span className="text-[10.5px] opacity-75">In Bench</span>
+                </div>
+                <div>
+                  <span className="text-lg font-black block">02:00 h</span>
+                  <span className="text-[10.5px] opacity-75">Chambers</span>
+                </div>
+                <div>
+                  <span className="text-lg font-black block">00:45 min</span>
+                  <span className="text-[10.5px] opacity-75">Order Signing</span>
+                </div>
+              </div>
+
+              <div className="mt-5 flex items-center justify-between text-[11px] font-semibold opacity-85">
+                <span>Lead IO Appearances: 6 Officers</span>
+                <span className="bg-blue-900/15 px-2.5 py-0.5 rounded-full font-bold">Bench 04</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Listed Matters & Dossier Split Grid (Matching Bottom of Image 2) */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Left: Active Matters List (styled like Patient's list in Image 2) */}
+            <Card className="p-5 space-y-3">
+              <div className="flex items-center justify-between pb-1">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">Today's Hearing Matters</h3>
+                  <p className="text-xs text-zinc-500">Click to preview case docket</p>
+                </div>
+                <span className="px-2.5 py-1 rounded-full bg-zinc-100 text-xs font-bold text-zinc-700">
+                  {todayHearings.length} Listed
+                </span>
+              </div>
+
+              <div className="space-y-2.5">
+                {todayHearings.map((h, idx) => {
+                  const isSelected = h.caseId === selectedCaseId
+                  const pastelBgs = [
+                    'bg-[#FCE7F3] text-pink-950 hover:bg-[#FBCFE8]',
+                    'bg-[#DBEAFE] text-blue-950 hover:bg-[#BFDBFE]',
+                    'bg-[#FEF3C7] text-amber-950 hover:bg-[#FDE68A]',
+                    'bg-[#DCFCE7] text-emerald-950 hover:bg-[#BBF7D0]',
+                  ]
+                  const currentBg = pastelBgs[idx % pastelBgs.length]
+
+                  return (
+                    <button
+                      key={h.id}
+                      type="button"
+                      onClick={() => setSelectedCaseId(h.caseId)}
+                      className={`w-full p-3.5 rounded-2xl flex items-center justify-between transition-all cursor-pointer text-left ${currentBg} ${
+                        isSelected ? 'ring-2 ring-black/40 shadow-sm' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="grid size-9 place-items-center rounded-full bg-white/80 shadow-xs font-bold text-xs shrink-0">
+                          {idx + 1}
+                        </div>
+                        <div>
+                          <div className="font-bold text-xs leading-snug truncate max-w-44">
+                            {h.caseTitle}
+                          </div>
+                          <div className="text-[11px] opacity-75 mt-0.5 font-medium truncate">
+                            {h.caseNumber} · {h.stage}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-white/70">
+                          {h.time}
+                        </span>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </Card>
+
+            {/* Right: Selected Case Dossier Preview (Matching Visit details in Image 2 & 4) */}
+            {selectedCase ? (
+              <Card className="p-5.5 space-y-4 bg-white">
+                <div className="flex items-center justify-between border-b border-black/[0.06] pb-3">
                   <div>
-                    <div className="text-xs font-medium text-foreground">{a.text}</div>
-                    <div className="mt-0.5 font-mono text-[10px] text-muted-foreground">
-                      Triggered {a.time} · Courtroom 04 Bench Registry
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                      Selected Case Docket
+                    </span>
+                    <h3 className="text-sm font-extrabold text-foreground mt-0.5">
+                      {selectedCase.number}
+                    </h3>
+                  </div>
+                  <Link to={`/cases/${selectedCase.id}`}>
+                    <button
+                      type="button"
+                      className="px-3.5 py-1.5 rounded-full bg-[#121316] text-white text-xs font-bold hover:bg-zinc-800 transition-colors cursor-pointer shadow-xs"
+                    >
+                      Open Case Report
+                    </button>
+                  </Link>
+                </div>
+
+                {/* Case Attributes & Tags */}
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <span className="text-zinc-400 text-[11px] font-medium block mb-1">Standardized Title:</span>
+                    <div className="font-bold text-foreground text-xs leading-snug">
+                      {selectedCase.title}
                     </div>
                   </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10.5px]">
+                      {selectedCase.checkedDocCategories?.length || 0} of 8 Doc Categories Checked
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-pink-100 text-pink-700 font-bold text-[10.5px]">
+                      {selectedCase.type}
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold text-[10.5px]">
+                      {selectedCase.stage}
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold text-[10.5px]">
+                      {selectedCase.policeStation}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5 bg-[#FAF7F0] p-3 rounded-2xl text-[11px]">
+                    <div>
+                      <span className="text-zinc-400 block text-[10px]">Lead IO:</span>
+                      <span className="font-bold text-zinc-900">{selectedCase.io?.name || 'Unassigned'}</span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-400 block text-[10px]">FIR Ref:</span>
+                      <span className="font-bold text-zinc-900">{selectedCase.fir?.no || 'N/A'} ({selectedCase.fir?.date || 'N/A'})</span>
+                    </div>
+                  </div>
+
+                  {selectedCase.weapons?.[0] && (
+                    <div className="bg-rose-50 border border-rose-100 p-2.5 rounded-2xl text-[11px] text-rose-950">
+                      <span className="font-bold text-[10.5px] uppercase block mb-0.5">Seized Weapon at Scene:</span>
+                      <span>{selectedCase.weapons[0].makeModel} (Serial: {selectedCase.weapons[0].serialNumber})</span>
+                    </div>
+                  )}
+
+                  <div className="pt-2 flex items-center justify-between border-t border-black/5">
+                    <span className="text-zinc-500 text-[11px]">Next hearing: {selectedCase.nextHearing}</span>
+                    <Link to={`/cases/${selectedCase.id}`}>
+                      <span className="text-xs font-bold text-[#FF5C5C] hover:underline flex items-center gap-1">
+                        View Full Dossier <ArrowRight className="size-3" />
+                      </span>
+                    </Link>
+                  </div>
                 </div>
-                <StatusChip s={a.sev} />
-              </li>
-            ))}
-        </ul>
-      </Card>
-    </>
+              </Card>
+            ) : (
+              <Card className="p-8 text-center space-y-3 bg-white flex flex-col items-center justify-center min-h-[280px]">
+                <Scale className="size-10 text-zinc-300 stroke-[1.5]" />
+                <h3 className="font-extrabold text-sm text-foreground">Registry Empty</h3>
+                <p className="text-xs text-zinc-500 max-w-xs leading-relaxed">
+                  No judicial cases registered in the database yet. Click below to intake your client's first case.
+                </p>
+                <Link to="/cases/new">
+                  <Button variant="primary" size="sm" className="mt-2">
+                    <Plus className="size-3.5" />
+                    <span>Intake New Case</span>
+                  </Button>
+                </Link>
+              </Card>
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: Calendar Widget & Today's Timeline (Matching Right Side of Image 2) */}
+        <div className="space-y-6">
+          <Card className="p-5.5 space-y-4">
+            {/* Calendar Month Header */}
+            <div className="flex items-center justify-between font-bold text-sm text-foreground">
+              <span className="px-3 py-1 rounded-full bg-zinc-100 text-xs font-bold">
+                October 2026
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => toast('Displaying current term October 2026', 'info')}
+                  className="grid size-7 place-items-center rounded-full hover:bg-zinc-100 cursor-pointer"
+                >
+                  <ChevronLeft className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toast('November 2026 docket pending gazette', 'info')}
+                  className="grid size-7 place-items-center rounded-full hover:bg-zinc-100 cursor-pointer"
+                >
+                  <ChevronRight className="size-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Days of week */}
+            <div className="grid grid-cols-7 text-center text-[10.5px] font-bold text-zinc-400">
+              <div>MO</div>
+              <div>TU</div>
+              <div>WE</div>
+              <div>TH</div>
+              <div>FR</div>
+              <div>SA</div>
+              <div>SU</div>
+            </div>
+
+            {/* Days Matrix */}
+            <div className="grid grid-cols-7 text-center text-xs font-semibold gap-y-1">
+              {/* Padding */}
+              <div className="text-zinc-300 py-1">28</div>
+              <div className="text-zinc-300 py-1">29</div>
+              <div className="text-zinc-300 py-1">30</div>
+              <div className="py-1">1</div>
+              <div className="py-1">2</div>
+              <div className="text-zinc-400 py-1">3</div>
+              <div className="text-zinc-400 py-1">4</div>
+
+              <div className="py-1">5</div>
+              <div className="py-1">6</div>
+              <div className="py-1">7</div>
+              <div className="py-1">8</div>
+              <div className="py-1">9</div>
+              <div className="text-zinc-400 py-1">10</div>
+              <div className="text-zinc-400 py-1">11</div>
+
+              {/* Day 12 Highlighted in Pink Pill (Like Day 15 in Image 2) */}
+              <div className="py-1">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCalendarDay(12)}
+                  className="size-7 rounded-full bg-[#FF5C5C] text-white font-bold grid place-items-center mx-auto shadow-xs cursor-pointer"
+                >
+                  12
+                </button>
+              </div>
+              <div className="py-1 cursor-pointer" onClick={() => setSelectedCalendarDay(13)}>13</div>
+              <div className="py-1 cursor-pointer" onClick={() => setSelectedCalendarDay(14)}>14</div>
+              <div className="py-1 cursor-pointer" onClick={() => setSelectedCalendarDay(15)}>15</div>
+              <div className="py-1 cursor-pointer" onClick={() => setSelectedCalendarDay(16)}>16</div>
+              <div className="text-zinc-400 py-1">17</div>
+              <div className="text-zinc-400 py-1">18</div>
+
+              <div className="py-1">19</div>
+              <div className="py-1">20</div>
+              <div className="py-1">21</div>
+              <div className="py-1">22</div>
+              <div className="py-1">23</div>
+              <div className="text-zinc-400 py-1">24</div>
+              <div className="text-zinc-400 py-1">25</div>
+            </div>
+
+            {/* Add Event / Hearing Button (Solid Black Pill like Image 2) */}
+            <Link to="/schedule" className="block pt-1">
+              <button
+                type="button"
+                className="w-full h-10.5 rounded-full bg-[#141518] text-white font-semibold text-xs hover:bg-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-[0.98]"
+              >
+                <Plus className="size-3.5" />
+                <span>Add Hearing / Adjourn</span>
+              </button>
+            </Link>
+
+            {/* Today's Timeline Section (Matching Image 2) */}
+            <div className="pt-4 border-t border-black/[0.06] space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-foreground">Oct 12 · Today's timeline</h4>
+                  <span className="text-[11px] text-zinc-400">Chronological courtroom flow</span>
+                </div>
+                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600">
+                  All
+                </span>
+              </div>
+
+              {/* Vertical timeline items with connecting lines */}
+              <div className="space-y-3 relative before:absolute before:left-3 before:top-3 before:bottom-3 before:w-0.5 before:bg-zinc-200">
+                {/* Timeline Item 1 */}
+                <div className="relative flex items-start gap-3 pl-1">
+                  <div className="size-5 rounded-full bg-[#FF5C5C] text-white font-bold text-[9px] grid place-items-center shrink-0 z-10 shadow-xs">
+                    •
+                  </div>
+                  <div className="flex-1 p-3 rounded-2xl bg-rose-50 border border-rose-100">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-rose-950">Remand Production</span>
+                      <span className="text-[10px] font-semibold text-rose-700">10:30 AM</span>
+                    </div>
+                    <p className="text-[11px] text-rose-800/80 mt-0.5">S.C. 214/2025 · Video Conf from Tihar</p>
+                  </div>
+                </div>
+
+                {/* Timeline Item 2 */}
+                <div className="relative flex items-start gap-3 pl-1">
+                  <div className="size-5 rounded-full bg-blue-500 text-white font-bold text-[9px] grid place-items-center shrink-0 z-10 shadow-xs">
+                    •
+                  </div>
+                  <div className="flex-1 p-3 rounded-2xl bg-blue-50 border border-blue-100">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-blue-950">In-Camera Deposition</span>
+                      <span className="text-[10px] font-semibold text-blue-700">11:45 AM</span>
+                    </div>
+                    <p className="text-[11px] text-blue-800/80 mt-0.5">Spl.S.C. 38/2025 · Child Friendly Room 02</p>
+                  </div>
+                </div>
+
+                {/* Timeline Item 3 */}
+                <div className="relative flex items-start gap-3 pl-1">
+                  <div className="size-5 rounded-full bg-amber-500 text-white font-bold text-[9px] grid place-items-center shrink-0 z-10 shadow-xs">
+                    •
+                  </div>
+                  <div className="flex-1 p-3 rounded-2xl bg-amber-50 border border-amber-100">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-amber-950">IO Cross Examination</span>
+                      <span className="text-[10px] font-semibold text-amber-700">02:00 PM</span>
+                    </div>
+                    <p className="text-[11px] text-amber-800/80 mt-0.5">DL-CR-2026-0481 · Court Hall 04</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* View all button */}
+              <Link to="/schedule" className="block pt-2">
+                <Button variant="outline" size="sm" className="w-full">
+                  View Full Monthly Docket
+                </Button>
+              </Link>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
   )
 }
