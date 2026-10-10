@@ -508,6 +508,28 @@ class JudicialStoreService {
         }))
         this.notify()
       }
+
+      const { data: supaCriminals } = await supabase.from('criminals').select('*')
+      if (supaCriminals && supaCriminals.length > 0) {
+        this.criminals = supaCriminals.map((sc: any) => ({
+          id: sc.id,
+          crimId: sc.crim_id || sc.id,
+          name: sc.name || 'Accused',
+          aliases: sc.aliases || [],
+          age: sc.age || 30,
+          dob: sc.dob || '1995-01-01',
+          gender: sc.gender || 'Male',
+          biometricHash: sc.biometric_hash || 'SHA256:0000',
+          recidivismScore: Number(sc.recidivism_score || 0.3),
+          activeCaseNumber: sc.active_case_number || '',
+          activeCaseId: sc.active_case_id || '',
+          custodyStatus: sc.custody_status || 'In custody',
+          address: sc.address || 'Delhi / NCR',
+          photoPlaceholder: sc.photo_placeholder || (sc.name ? sc.name.slice(0, 2).toUpperCase() : 'AC'),
+          crimes: sc.crimes || [],
+        }))
+        this.notify()
+      }
     } catch (e) {
       console.warn('Supabase sync notice:', e)
     }
@@ -934,6 +956,75 @@ class JudicialStoreService {
         c.name.toLowerCase().includes(q) ||
         c.aliases.some((a) => a.toLowerCase().includes(q))
     )
+  }
+
+  public addCriminal(criminalData: Omit<CriminalRecord, 'id' | 'crimId'> & { crimId?: string }): CriminalRecord {
+    const nextSeq = String(this.criminals.length + 1).padStart(3, '0')
+    const currentYear = new Date().getFullYear()
+    const crimId = criminalData.crimId || `CRIM-${currentYear}-${nextSeq}`
+    const id = crimId.toLowerCase().replace(/[^a-z0-9]/g, '-')
+
+    const newCriminal: CriminalRecord = {
+      ...criminalData,
+      id,
+      crimId,
+      photoPlaceholder: criminalData.photoPlaceholder || (criminalData.name ? criminalData.name.slice(0, 2).toUpperCase() : 'CR'),
+      biometricHash: criminalData.biometricHash || `SHA256:${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
+      crimes: criminalData.crimes || [],
+      aliases: criminalData.aliases || [],
+    }
+
+    this.criminals = [newCriminal, ...this.criminals]
+    this.notify()
+
+    if (supabase) {
+      try {
+        supabase.from('criminals').upsert({
+          id: newCriminal.id,
+          crim_id: newCriminal.crimId,
+          name: newCriminal.name,
+          age: newCriminal.age,
+          dob: newCriminal.dob,
+          gender: newCriminal.gender,
+          custody_status: newCriminal.custodyStatus,
+          address: newCriminal.address,
+          recidivism_score: newCriminal.recidivismScore,
+          active_case_number: newCriminal.activeCaseNumber,
+        }).then(() => {}).catch(() => {})
+      } catch (e) {
+        console.warn('Supabase upsert criminal error:', e)
+      }
+    }
+
+    return newCriminal
+  }
+
+  public deleteCriminal(criminalId: string): boolean {
+    const prevLen = this.criminals.length
+    this.criminals = this.criminals.filter((c) => c.id !== criminalId && c.crimId !== criminalId)
+    if (this.criminals.length !== prevLen) {
+      this.notify()
+      if (supabase) {
+        try {
+          supabase.from('criminals').delete().or(`id.eq.${criminalId},crim_id.eq.${criminalId}`).then(() => {}).catch(() => {})
+        } catch (e) {
+          console.warn('Supabase delete criminal error:', e)
+        }
+      }
+      return true
+    }
+    return false
+  }
+
+  public updateCriminal(criminalId: string, updates: Partial<CriminalRecord>): CriminalRecord | undefined {
+    const idx = this.criminals.findIndex((c) => c.id === criminalId || c.crimId === criminalId)
+    if (idx === -1) return undefined
+    this.criminals[idx] = {
+      ...this.criminals[idx],
+      ...updates,
+    }
+    this.notify()
+    return this.criminals[idx]
   }
 
   // --------------------------------------------------------------------------
