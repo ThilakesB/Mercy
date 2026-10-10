@@ -418,12 +418,12 @@ export const alertRows = [
 ]
 
 export const users = [
-  { name: 'Hon. R. Venkataraman', email: 'r.venkataraman@ecourts.gov.in', role: 'Judge', last: 'Today 09:12', active: true },
-  { name: 'M. Kalaivani', email: 'm.kalaivani@ecourts.gov.in', role: 'Clerk', last: 'Today 09:40', active: true },
-  { name: 'R. Suresh', email: 'r.suresh@ecourts.gov.in', role: 'Clerk', last: 'Yesterday 17:22', active: true },
-  { name: 'S. Ibrahim', email: 's.ibrahim@ecourts.gov.in', role: 'Clerk', last: '08 Oct 2026', active: true },
-  { name: 'D. Anandhi', email: 'd.anandhi@ecourts.gov.in', role: 'Admin', last: 'Today 08:55', active: true },
-  { name: 'P. Divya', email: 'p.divya@ecourts.gov.in', role: 'Clerk', last: '21 Sep 2026', active: false },
+  { name: 'Justice R. Vance', email: 'r.vance@mercy-legal.app', role: 'Judge', last: 'Today 09:12', active: true },
+  { name: 'M. Kalaivani', email: 'm.kalaivani@mercy-legal.app', role: 'Clerk', last: 'Today 09:40', active: true },
+  { name: 'R. Suresh', email: 'r.suresh@mercy-legal.app', role: 'Clerk', last: 'Yesterday 17:22', active: true },
+  { name: 'S. Ibrahim', email: 's.ibrahim@mercy-legal.app', role: 'Clerk', last: '08 Oct 2026', active: true },
+  { name: 'D. Anandhi', email: 'd.anandhi@mercy-legal.app', role: 'Admin', last: 'Today 08:55', active: true },
+  { name: 'P. Divya', email: 'p.divya@mercy-legal.app', role: 'Clerk', last: '21 Sep 2026', active: false },
 ]
 
 export const permissions = [
@@ -439,7 +439,7 @@ export const permissions = [
 
 export const auditLog = [
   { t: '12 Oct 2026 09:41', user: 'M. Kalaivani', action: 'Viewed case', target: 'S.C. 214/2025' },
-  { t: '12 Oct 2026 09:15', user: 'Hon. R. Venkataraman', action: 'Unmasked party name (reason logged)', target: 'Spl.S.C. (POCSO) 38/2025' },
+  { t: '12 Oct 2026 09:15', user: 'Justice R. Vance', action: 'Unmasked party name (reason logged)', target: 'Spl.S.C. (POCSO) 38/2025' },
   { t: '11 Oct 2026 17:22', user: 'R. Suresh', action: 'Snoozed alert 2 days', target: 'S.C. 198/2024' },
   { t: '11 Oct 2026 12:03', user: 'D. Anandhi', action: 'Changed inactivity threshold (Criminal 60 to 45 d)', target: 'Rule settings' },
   { t: '10 Oct 2026 16:48', user: 'S. Ibrahim', action: 'Exported summary', target: 'H.M.O.P. 67/2025' },

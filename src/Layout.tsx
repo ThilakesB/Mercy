@@ -27,13 +27,18 @@ import {
   AlertTriangle,
   User,
   SlidersHorizontal,
+  Info,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { judicialStore } from './lib/judicialStore'
 import { isSupabaseConfigured } from './lib/supabase'
 import { cn, useApp, Button } from './ui'
+import AuthButton from './components/AuthButton'
 
 const navGeneral = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/about', label: 'About', icon: Info },
   { to: '/schedule', label: 'Schedule', icon: History },
   { to: '/cases', label: 'Case Files', icon: Briefcase },
   { to: '/criminals', label: 'Criminals', icon: Users2 },
@@ -89,7 +94,7 @@ function GlobalSearch() {
             setOpen(true)
           }}
           onFocus={() => setOpen(true)}
-          placeholder="Search criminals by name, ID or case no (e.g. Rahul Verma, S.C. 214)..."
+          placeholder="Case ID"
           className="h-9 w-full bg-transparent text-sm sm:text-[15px] font-semibold text-foreground placeholder:text-zinc-400 focus:outline-none"
         />
 
@@ -256,7 +261,7 @@ function AlarmsDrawer({
 
 export default function Layout() {
   const { authed, setAuthed, role, theme, setTheme } = useApp()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [alarmsOpen, setAlarmsOpen] = useState(false)
   const [, setTick] = useState(0)
 
@@ -272,27 +277,70 @@ export default function Layout() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F4EB] text-foreground flex p-2 md:p-3.5">
-      {/* Sleek Dark Rounded Sidebar (Matching Images 2 & 3) */}
+    <div className="min-h-screen bg-[#F7F4EB] text-foreground flex p-2 md:p-3.5 relative">
+      {/* Fluid Left-Edge Interaction Sensor & Floating Water Handle */}
+      <div
+        className="fixed inset-y-0 left-0 w-6 md:w-8 z-40 cursor-pointer pointer-events-auto"
+        onMouseEnter={() => setSidebarOpen(true)}
+        onPointerMove={() => setSidebarOpen(true)}
+        onTouchStart={() => setSidebarOpen(true)}
+        aria-label="Draw out sidebar"
+      >
+        {!sidebarOpen && (
+          <div
+            className="water-handle-pulse absolute left-0 top-1/2 -translate-y-1/2 flex items-center justify-center pl-1 pr-1.5 py-3 rounded-r-2xl bg-[#121316]/90 text-white shadow-xl border-y border-r border-white/20 backdrop-blur-xs transition-transform hover:translate-x-1"
+            title="Move pointer near edge or touch to draw out sidebar"
+          >
+            <ChevronRight className="size-4 text-zinc-300" />
+          </div>
+        )}
+      </div>
+
+      {/* Touch & Click Backdrop Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/25 backdrop-blur-xs transition-opacity duration-300"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Fluid Water-Flow Sidebar */}
       <aside
-        className={`w-56 bg-[#121316] text-white rounded-[28px] shrink-0 flex flex-col justify-between p-4.5 shadow-2xl transition-all ${
-          mobileMenuOpen ? 'fixed inset-y-3 left-3 z-50 w-64' : 'hidden md:flex'
+        className={`fixed inset-y-2 left-2 z-50 md:inset-y-3 md:left-3 w-60 bg-[#121316] text-white rounded-[28px] shrink-0 flex flex-col justify-between p-4.5 shadow-2xl flow-sidebar ${
+          sidebarOpen
+            ? 'translate-x-0 opacity-100 shadow-[0_16px_50px_rgba(0,0,0,0.35)]'
+            : '-translate-x-[115%] opacity-0 pointer-events-none'
         }`}
       >
+        {/* Subtle Retract Chevron Handle on Sidebar Edge */}
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(false)}
+          className="absolute -right-3 top-1/2 -translate-y-1/2 size-7 rounded-full bg-[#121316] text-white border border-white/20 shadow-md grid place-items-center hover:scale-110 active:scale-95 transition-all cursor-pointer z-50"
+          aria-label="Retract sidebar"
+          title="Retract sidebar"
+        >
+          <ChevronLeft className="size-3.5 text-zinc-300" />
+        </button>
+
         <div className="space-y-6">
-          {/* Brand Logo with Coral Pill Dot */}
+          {/* Brand Logo with Coral Pill Dot and Header Retract Chevron */}
           <div className="flex items-center justify-between px-2 pt-1">
-            <NavLink to="/" className="flex items-center gap-2">
-              <span className="font-extrabold text-xl tracking-tight text-white font-sans lowercase">
-                nyayadesk
+            <NavLink to="/" className="flex items-center gap-2" onClick={() => setSidebarOpen(false)}>
+              <span className="font-extrabold text-xl tracking-[0.22em] text-white font-sans uppercase">
+                MERCY
               </span>
               <span className="size-2 rounded-full bg-[#FF5C5C]" />
             </NavLink>
             <button
-              onClick={() => setMobileMenuOpen(false)}
-              className="md:hidden text-zinc-400 hover:text-white"
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              className="grid size-7 place-items-center rounded-full text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              aria-label="Retract sidebar"
+              title="Retract sidebar"
             >
-              <X className="size-4" />
+              <ChevronLeft className="size-4" />
             </button>
           </div>
 
@@ -306,7 +354,7 @@ export default function Layout() {
                 key={item.to}
                 to={item.to}
                 end={item.to === '/'}
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => setSidebarOpen(false)}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all ${
                     isActive
@@ -330,7 +378,7 @@ export default function Layout() {
               <NavLink
                 key={item.to}
                 to={item.to}
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => setSidebarOpen(false)}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all ${
                     isActive
@@ -350,11 +398,11 @@ export default function Layout() {
         <div className="border-t border-white/10 pt-4 px-2 space-y-3">
           <div className="flex items-center gap-2.5">
             <div className="size-8 rounded-full bg-[#FF5C5C] text-white font-bold text-xs grid place-items-center shrink-0">
-              VR
+              PO
             </div>
             <div className="overflow-hidden">
-              <div className="text-xs font-bold text-white truncate">Hon. Justice Venkataraman</div>
-              <div className="text-[10px] text-zinc-400">Bench 04 · Sessions</div>
+              <div className="text-xs font-bold text-white truncate">Presiding Officer</div>
+              <div className="text-[10px] text-zinc-400">Chamber Suite · Active</div>
             </div>
           </div>
 
@@ -372,16 +420,28 @@ export default function Layout() {
       <div className="flex-1 flex flex-col min-w-0 px-2 md:px-5 py-1">
         {/* Top Floating Utility Header */}
         <header className="min-h-20 flex items-center justify-between gap-4 mb-5">
-          <div className="flex items-center gap-3 md:hidden">
+          {/* Top-Left Area: Subtle Chevron Handle & MERCY Brand */}
+          <div className="flex items-center gap-2.5 shrink-0">
             <button
-              onClick={() => setMobileMenuOpen(true)}
-              className="grid size-11 place-items-center rounded-full bg-white border border-black/10 text-zinc-800 shadow-sm"
+              type="button"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="grid size-9 sm:size-9.5 place-items-center rounded-full bg-white/90 border border-black/10 text-zinc-700 hover:bg-white hover:text-black shadow-xs hover:shadow-sm active:scale-95 transition-all cursor-pointer"
+              aria-label={sidebarOpen ? "Retract sidebar" : "Draw out sidebar"}
+              title={sidebarOpen ? "Retract sidebar" : "Draw out sidebar"}
             >
-              <Menu className="size-5" />
+              {sidebarOpen ? (
+                <ChevronLeft className="size-4 text-zinc-600" />
+              ) : (
+                <ChevronRight className="size-4 text-zinc-600" />
+              )}
             </button>
-            <span className="font-black text-lg tracking-tight text-foreground lowercase">
-              nyayadesk
-            </span>
+
+            <NavLink to="/" className="flex items-center gap-1.5 pl-0.5">
+              <span className="font-extrabold text-base tracking-[0.22em] text-foreground font-sans uppercase">
+                MERCY
+              </span>
+              <span className="size-2 rounded-full bg-[#FF5C5C]" />
+            </NavLink>
           </div>
 
           {/* Search bar */}
@@ -389,26 +449,8 @@ export default function Layout() {
             <GlobalSearch />
           </div>
 
-          {/* Right Action Icons (Enlarged per user request) */}
+          {/* Right Action Icons */}
           <div className="flex items-center gap-3.5 sm:gap-4">
-            {/* Supabase Cloud Connection status badge (Bigger) */}
-            <NavLink
-              to="/settings"
-              className={`hidden lg:flex items-center gap-2.5 px-4.5 py-2.5 rounded-full bg-white border text-xs sm:text-sm font-bold shadow-sm hover:border-black/25 transition-all ${
-                isSupabaseConfigured()
-                  ? 'border-black/10 text-emerald-800'
-                  : 'border-amber-300 text-amber-900 bg-amber-50/50'
-              }`}
-            >
-              <span
-                className={`size-2.5 rounded-full ${
-                  isSupabaseConfigured()
-                    ? 'bg-emerald-500 animate-pulse'
-                    : 'bg-amber-500'
-                }`}
-              />
-              <span>{isSupabaseConfigured() ? 'Supabase: Connected' : 'DB: Setup API Key'}</span>
-            </NavLink>
 
             {/* Notification Bell with Badge (Bigger) */}
             <div className="relative">
@@ -438,20 +480,8 @@ export default function Layout() {
               )}
             </button>
 
-            {/* Profile Avatar Pill Button (Bigger) */}
-            <NavLink
-              to="/settings"
-              className="flex items-center gap-3 pl-2.5 pr-4.5 py-2 rounded-full bg-white border border-black/10 shadow-sm hover:border-black/25 transition-all cursor-pointer"
-            >
-              <div className="size-9 sm:size-9.5 rounded-full bg-zinc-950 text-white font-black text-xs sm:text-sm grid place-items-center shadow-xs">
-                VR
-              </div>
-              <div className="hidden sm:block text-left">
-                <span className="text-sm font-black text-zinc-900 block leading-tight">
-                  Judge
-                </span>
-              </div>
-            </NavLink>
+            {/* Custom Native Authentication Button */}
+            <AuthButton />
           </div>
         </header>
 

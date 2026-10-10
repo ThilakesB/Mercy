@@ -23,6 +23,7 @@ import Summary from './pages/Summary'
 import Alerts from './pages/Alerts'
 import Public from './pages/Public'
 import Admin from './pages/Admin'
+import About from './pages/About'
 import { Button, Card, EmptyState } from './ui'
 
 const router = createBrowserRouter([
@@ -33,6 +34,7 @@ const router = createBrowserRouter([
     Component: Layout,
     children: [
       { index: true, Component: Dashboard },
+      { path: 'about', Component: About },
       { path: 'cases', Component: Cases },
       { path: 'cases/new', Component: CasesNew },
       { path: 'cases/:id', Component: CaseDetail },

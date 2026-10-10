@@ -465,7 +465,7 @@ export const INITIAL_LAWYERS: LawyerRecord[] = [
     isParticipatingInBench: true,
     clearanceStatus: 'VERIFIED',
     phone: '+91-94441-20911',
-    email: 'p.lakshmi.spp@tngov.in',
+    email: 'p.lakshmi.spp@mercy-legal.app',
     chamber: 'Chamber 18, City Civil Court Buildings, Chennai',
   },
   {
@@ -493,7 +493,7 @@ export const INITIAL_LAWYERS: LawyerRecord[] = [
     isParticipatingInBench: true,
     clearanceStatus: 'VERIFIED',
     phone: '+91-98410-63201',
-    email: 'revathi.spp.pocso@gov.in',
+    email: 'revathi.spp.pocso@mercy-legal.app',
     chamber: 'Special Prosecutor Office, Madurai District Court',
   },
   {
@@ -563,7 +563,7 @@ export const INITIAL_LAWYERS: LawyerRecord[] = [
     isParticipatingInBench: true,
     clearanceStatus: 'VERIFIED',
     phone: '+91-94420-77192',
-    email: 'fathima.dlsa.panel@gov.in',
+    email: 'fathima.dlsa.panel@mercy-legal.app',
     chamber: 'District Legal Services Authority, Madurai',
   },
 ]
