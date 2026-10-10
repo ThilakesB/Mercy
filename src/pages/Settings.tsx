@@ -6,32 +6,21 @@ import {
   Palette,
   Moon,
   Sun,
-  Database,
-  Sparkles,
   Bell,
   Lock,
   Download,
-  Upload,
   Trash2,
-  RefreshCw,
   Check,
-  CheckCircle2,
-  AlertTriangle,
-  Eye,
-  EyeOff,
-  Save,
-  Sliders,
   Shield,
-  FileSpreadsheet,
+  Eye,
+  Clock,
+  Globe,
+  Sliders,
+  Volume2,
+  Save,
+  CheckCircle2,
 } from 'lucide-react'
 import { judicialStore } from '../lib/judicialStore'
-import {
-  getSupabaseConfig,
-  setSupabaseConfig,
-  isSupabaseConfigured,
-  getSupabase,
-} from '../lib/supabase'
-import { askGeminiLegalAI } from '../lib/gemini'
 import {
   Button,
   Card,
@@ -39,17 +28,16 @@ import {
   Field,
   Input,
   Select,
-  Switch,
   useApp,
 } from '../ui'
 
 export default function Settings() {
   const { user, theme, setTheme, toast } = useApp()
 
-  // 1. Court & Bench Profile
-  const [courtProfile, setCourtProfile] = useState(() => {
+  // 1. Profile Settings
+  const [profile, setProfile] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('mercy_court_profile')
+      const saved = localStorage.getItem('mercy_user_profile_settings')
       if (saved) {
         try {
           return JSON.parse(saved)
@@ -57,48 +45,33 @@ export default function Settings() {
       }
     }
     return {
-      judgeName: user?.name || 'Hon. Justice R. Venkataraman',
-      benchTitle: 'Sessions Judge · Bench 04',
-      courtName: 'Principal Sessions Court',
-      jurisdiction: 'New Delhi Sessions Division (DL)',
-      email: user?.email || 'thilakesb@gmail.com',
-      casePrefix: 'SC/ND-2026/',
+      fullName: user?.name || 'Hon. Justice R. Venkataraman',
+      judicialTitle: 'Presiding Sessions Judge',
+      courtRoom: 'Court Hall 04 (Main Sessions)',
+      division: 'New Delhi Sessions Division',
     }
   })
 
-  // 2. Display & Interface Preferences
-  const [dateFormat, setDateFormat] = useState(() => {
-    return (typeof window !== 'undefined' && localStorage.getItem('mercy_date_format')) || 'DD/MM/YYYY'
+  // 2. Appearance & Interface Preferences
+  const [fontSize, setFontSize] = useState(() => {
+    return (typeof window !== 'undefined' && localStorage.getItem('mercy_font_size')) || 'standard'
   })
   const [tableDensity, setTableDensity] = useState(() => {
     return (typeof window !== 'undefined' && localStorage.getItem('mercy_table_density')) || 'comfortable'
   })
 
-  // 3. Cloud Database (Supabase)
-  const initialSupabase = getSupabaseConfig()
-  const [supabaseUrl, setSupabaseUrl] = useState(
-    initialSupabase.url || 'https://vodrmtqzqrmrcevmlvyg.supabase.co'
-  )
-  const [supabaseKey, setSupabaseKey] = useState(initialSupabase.key || '')
-  const [showSupabaseKey, setShowSupabaseKey] = useState(false)
-  const [isTestingSupabase, setIsTestingSupabase] = useState(false)
-  const [supabaseStatus, setSupabaseStatus] = useState<{
-    success?: boolean
-    msg?: string
-    latency?: number
-  } | null>(null)
-
-  // 4. Gemini Legal AI
-  const [geminiKey, setGeminiKey] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('mercy_gemini_api_key') || import.meta.env.VITE_GEMINI_API_KEY || ''
-    }
-    return ''
+  // 3. Regional & Date Preferences
+  const [dateFormat, setDateFormat] = useState(() => {
+    return (typeof window !== 'undefined' && localStorage.getItem('mercy_date_format')) || 'DD/MM/YYYY'
   })
-  const [showGeminiKey, setShowGeminiKey] = useState(false)
-  const [isTestingGemini, setIsTestingGemini] = useState(false)
+  const [timeFormat, setTimeFormat] = useState(() => {
+    return (typeof window !== 'undefined' && localStorage.getItem('mercy_time_format')) || '12h'
+  })
+  const [defaultView, setDefaultView] = useState(() => {
+    return (typeof window !== 'undefined' && localStorage.getItem('mercy_default_view')) || 'today'
+  })
 
-  // 5. Notifications & Alarms
+  // 4. Notifications & Alerts
   const [notifications, setNotifications] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('mercy_notifications_config')
@@ -110,127 +83,52 @@ export default function Settings() {
     }
     return {
       hearingReminders: true,
-      statutoryBailAlerts: true,
-      caseAdjournmentAlerts: true,
-      dailyDigest: false,
+      soundAlerts: true,
+      caseAdjournments: true,
+      dailyMorningDigest: false,
     }
   })
+  const [leadTime, setLeadTime] = useState(() => {
+    return (typeof window !== 'undefined' && localStorage.getItem('mercy_reminder_lead_time')) || '15'
+  })
+
+  // 5. Security & Privacy
   const [autoLockTimeout, setAutoLockTimeout] = useState(() => {
     return (typeof window !== 'undefined' && localStorage.getItem('mercy_autolock')) || '15'
   })
+  const [confirmBeforeDelete, setConfirmBeforeDelete] = useState(() => {
+    return (typeof window !== 'undefined' && localStorage.getItem('mercy_confirm_delete') !== 'false')
+  })
+  const [maskJuvenileNames, setMaskJuvenileNames] = useState(() => {
+    return (typeof window !== 'undefined' && localStorage.getItem('mercy_mask_juvenile') === 'true')
+  })
 
-  // Save Court Profile
+  // Save Profile Handler
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault()
     if (typeof window !== 'undefined') {
-      localStorage.setItem('mercy_court_profile', JSON.stringify(courtProfile))
+      localStorage.setItem('mercy_user_profile_settings', JSON.stringify(profile))
     }
-    toast('Court & Bench profile saved successfully!', 'ok')
+    toast('Profile details updated successfully!', 'ok')
   }
 
-  // Save Supabase
-  const handleSaveSupabase = (e?: React.FormEvent) => {
-    if (e) e.preventDefault()
-    if (!supabaseUrl.trim()) {
-      toast('Please enter a valid Supabase project URL', 'bad')
-      return
-    }
-    setSupabaseConfig(supabaseUrl.trim(), supabaseKey.trim())
-    toast('Supabase configuration saved! Testing connection...', 'ok')
-    handleTestSupabase()
-  }
-
-  // Test Supabase
-  const handleTestSupabase = async () => {
-    setIsTestingSupabase(true)
-    setSupabaseStatus(null)
-    const startTime = performance.now()
-    try {
-      const client = getSupabase()
-      if (!client) {
-        setSupabaseStatus({
-          success: false,
-          msg: 'Please save both Project URL and Anon Key to test connection.',
-        })
-        return
-      }
-
-      const { error } = await client.from('cases').select('id').limit(1)
-      const elapsed = Math.round(performance.now() - startTime)
-
-      if (error && error.code !== 'PGRST204' && !error.message?.includes('does not exist')) {
-        setSupabaseStatus({
-          success: false,
-          latency: elapsed,
-          msg: `Supabase query error: ${error.message} (Code: ${error.code})`,
-        })
-        toast(`Supabase connection error: ${error.message}`, 'bad')
-      } else {
-        setSupabaseStatus({
-          success: true,
-          latency: elapsed,
-          msg: `Connected successfully (${elapsed}ms)! Cloud PostgreSQL database is responding.`,
-        })
-        toast('Connected successfully to Supabase cloud database!', 'ok')
-      }
-    } catch (err: any) {
-      setSupabaseStatus({
-        success: false,
-        msg: `Connection failed: ${err.message || 'Network / CORS error'}.`,
-      })
-      toast('Could not connect to Supabase endpoint', 'bad')
-    } finally {
-      setIsTestingSupabase(false)
-    }
-  }
-
-  // Save Gemini Key
-  const handleSaveGeminiKey = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('mercy_gemini_api_key', geminiKey.trim())
-      toast('Gemini Legal AI API Key saved!', 'ok')
-    }
-  }
-
-  // Test Gemini AI
-  const handleTestGemini = async () => {
-    if (!geminiKey.trim()) {
-      toast('Please enter a Gemini API Key first', 'bad')
-      return
-    }
-    setIsTestingGemini(true)
-    try {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('mercy_gemini_api_key', geminiKey.trim())
-      }
-      const response = await askGeminiLegalAI(
-        'Confirm bench assistant connection in 1 short sentence with statutory affirmation.'
-      )
-      toast('Gemini AI connected! ' + response.slice(0, 50) + '...', 'ok')
-    } catch (err: any) {
-      toast('Gemini AI connection failed: ' + err.message, 'bad')
-    } finally {
-      setIsTestingGemini(false)
-    }
-  }
-
-  // Save Notification Config
+  // Toggle Notification Helper
   const handleToggleNotification = (key: keyof typeof notifications, value: boolean) => {
     const updated = { ...notifications, [key]: value }
     setNotifications(updated)
     if (typeof window !== 'undefined') {
       localStorage.setItem('mercy_notifications_config', JSON.stringify(updated))
     }
-    toast('Notification preference updated', 'ok')
+    toast('Notification settings saved', 'ok')
   }
 
   // Export JSON Backup
   const handleExportData = () => {
     const exportPayload = {
       exportedAt: new Date().toISOString(),
-      appName: 'Mercy Judicial Platform',
+      platform: 'Mercy Judicial Management Platform',
       version: '1.0',
-      courtProfile,
+      profile,
       cases: judicialStore.getCases(),
       criminals: judicialStore.getCriminals(),
       lawyers: judicialStore.getLawyers(),
@@ -244,157 +142,122 @@ export default function Settings() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `mercy_judicial_records_${new Date().toISOString().slice(0, 10)}.json`
+    a.download = `mercy_backup_${new Date().toISOString().slice(0, 10)}.json`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-    toast('Court records exported successfully as JSON file!', 'ok')
+    toast('Court records exported to JSON backup!', 'ok')
   }
 
-  // Clear Registry Cache
+  // Clear Local Cache
   const handleClearCache = () => {
     if (
       window.confirm(
-        'Are you sure you want to clear local cache records? Unsynced changes will be reset.'
+        'Are you sure you want to clear local application cache? Browser cached files will be refreshed.'
       )
     ) {
       judicialStore.resetToCleanState()
-      toast('Local registry cache cleared successfully.', 'ok')
+      toast('Local application cache cleared.', 'ok')
     }
   }
 
-  const isConfigured = isSupabaseConfigured()
-
   return (
-    <div className="space-y-6 max-w-6xl pb-10">
+    <div className="space-y-6 max-w-5xl pb-12">
       <PageHeader
-        title="Settings & System Preferences"
-        sub="Configure court profile, display appearance, cloud database integration, and automated court docket alerts."
+        title="Settings & Preferences"
+        sub="Customize profile details, appearance themes, docket reminders, regional formats, and session security."
       />
 
-      {/* 1. COURT & BENCH PROFILE */}
-      <Card className="bg-white p-6 sm:p-7 rounded-3xl space-y-6 shadow-sm border border-black/[0.06]">
+      {/* 1. PROFILE & JUDICIAL BENCH DETAILS */}
+      <Card className="bg-white p-6 sm:p-7 rounded-3xl space-y-5 shadow-sm border border-black/[0.06]">
         <div className="flex items-center gap-3.5 pb-4 border-b border-black/[0.06]">
           <div className="size-11 rounded-2xl bg-[#121316] text-white grid place-items-center">
-            <Building2 className="size-5 text-[#FF5C5C]" />
+            <User className="size-5 text-[#FF5C5C]" />
           </div>
           <div>
             <h2 className="font-black text-sm uppercase tracking-wider text-zinc-900">
-              Court &amp; Bench Profile
+              Profile &amp; Judicial Officer Information
             </h2>
             <p className="text-xs text-zinc-500 font-medium mt-0.5">
-              Official judicial officer details, court establishment, and default docket numbering prefix.
+              Personalized designation displayed across case orders, decree signatures, and cause lists.
             </p>
           </div>
         </div>
 
         <form onSubmit={handleSaveProfile} className="space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
-            <Field label="Presiding Judicial Officer Name">
+            <Field label="Full Name">
               <Input
-                value={courtProfile.judgeName}
-                onChange={(e) =>
-                  setCourtProfile({ ...courtProfile, judgeName: e.target.value })
-                }
+                value={profile.fullName}
+                onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
                 placeholder="Hon. Justice R. Venkataraman"
                 required
               />
             </Field>
 
-            <Field label="Designation / Bench Style">
+            <Field label="Judicial Designation / Role">
               <Input
-                value={courtProfile.benchTitle}
-                onChange={(e) =>
-                  setCourtProfile({ ...courtProfile, benchTitle: e.target.value })
-                }
-                placeholder="Principal Sessions Judge · Bench 04"
+                value={profile.judicialTitle}
+                onChange={(e) => setProfile({ ...profile, judicialTitle: e.target.value })}
+                placeholder="Presiding Sessions Judge"
                 required
               />
             </Field>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
-            <Field label="Court Establishment / Complex">
+            <Field label="Assigned Courtroom / Bench">
               <Input
-                value={courtProfile.courtName}
-                onChange={(e) =>
-                  setCourtProfile({ ...courtProfile, courtName: e.target.value })
-                }
-                placeholder="Principal Sessions Court"
+                value={profile.courtRoom}
+                onChange={(e) => setProfile({ ...profile, courtRoom: e.target.value })}
+                placeholder="Court Hall 04 (Main Sessions)"
                 required
               />
             </Field>
 
-            <Field label="Jurisdiction & Division">
+            <Field label="Judicial Division / Jurisdiction">
               <Input
-                value={courtProfile.jurisdiction}
-                onChange={(e) =>
-                  setCourtProfile({ ...courtProfile, jurisdiction: e.target.value })
-                }
-                placeholder="New Delhi Sessions Division (DL)"
+                value={profile.division}
+                onChange={(e) => setProfile({ ...profile, division: e.target.value })}
+                placeholder="New Delhi Sessions Division"
                 required
               />
             </Field>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <Field label="Official Bench Email">
-              <Input
-                type="email"
-                value={courtProfile.email}
-                onChange={(e) =>
-                  setCourtProfile({ ...courtProfile, email: e.target.value })
-                }
-                placeholder="thilakesb@gmail.com"
-                required
-              />
-            </Field>
-
-            <Field label="Auto Case Numbering Prefix">
-              <Input
-                value={courtProfile.casePrefix}
-                onChange={(e) =>
-                  setCourtProfile({ ...courtProfile, casePrefix: e.target.value })
-                }
-                placeholder="SC/ND-2026/"
-                required
-              />
-            </Field>
-          </div>
-
-          <div className="flex justify-end pt-2">
+          <div className="flex justify-end pt-1">
             <Button type="submit" variant="primary" className="rounded-full shadow-sm flex items-center gap-2">
               <Save className="size-4" />
-              <span>Save Court Profile</span>
+              <span>Save Profile</span>
             </Button>
           </div>
         </form>
       </Card>
 
-      {/* 2. APPEARANCE & DISPLAY PREFERENCES */}
-      <Card className="bg-white p-6 sm:p-7 rounded-3xl space-y-6 shadow-sm border border-black/[0.06]">
+      {/* 2. APPEARANCE & THEME */}
+      <Card className="bg-white p-6 sm:p-7 rounded-3xl space-y-5 shadow-sm border border-black/[0.06]">
         <div className="flex items-center gap-3.5 pb-4 border-b border-black/[0.06]">
           <div className="size-11 rounded-2xl bg-amber-100 text-amber-900 grid place-items-center">
             <Palette className="size-5 text-amber-950" />
           </div>
           <div>
             <h2 className="font-black text-sm uppercase tracking-wider text-zinc-900">
-              Appearance &amp; Optical Theme
+              Appearance &amp; Display Theme
             </h2>
             <p className="text-xs text-zinc-500 font-medium mt-0.5">
-              Select courtroom illumination theme, table density, and calendar date format.
+              Choose courtroom visual theme, table spacing density, and interface scaling.
             </p>
           </div>
         </div>
 
         <div className="grid md:grid-cols-2 gap-4">
-          {/* Light Theme Card */}
+          {/* Light Mode */}
           <button
             type="button"
             onClick={() => {
               setTheme('swiss-light')
-              toast('Switched to Warm Cream substrate (#F7F4EB)', 'ok')
+              toast('Switched to Warm Cream theme', 'ok')
             }}
             className={`p-4.5 text-left rounded-2xl border transition-all cursor-pointer ${
               theme === 'swiss-light'
@@ -402,26 +265,24 @@ export default function Settings() {
                 : 'border-black/[0.08] bg-white hover:bg-zinc-50'
             }`}
           >
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-1.5">
               <div className="font-extrabold text-sm text-zinc-950 flex items-center gap-2">
                 <Sun className="size-4 text-amber-600" />
-                <span>Warm Cream Bento (Default)</span>
+                <span>Warm Cream Bento (Default Light)</span>
               </div>
-              {theme === 'swiss-light' && (
-                <span className="size-2 rounded-full bg-emerald-500" />
-              )}
+              {theme === 'swiss-light' && <CheckCircle2 className="size-4 text-emerald-600" />}
             </div>
-            <div className="text-xs text-zinc-600 font-medium leading-relaxed">
-              Warm cream paper substrate (#F7F4EB) with dark capsule navigation and soft pastel cards.
-            </div>
+            <p className="text-xs text-zinc-600 font-medium leading-relaxed">
+              Clean warm cream background with dark high-contrast navigation and soft pastel cards.
+            </p>
           </button>
 
-          {/* Dark Theme Card */}
+          {/* Dark Mode */}
           <button
             type="button"
             onClick={() => {
               setTheme('tactical-dark')
-              toast('Switched to Tactical Dark CRT (#0A0A0A)', 'ok')
+              toast('Switched to Tactical Dark theme', 'ok')
             }}
             className={`p-4.5 text-left rounded-2xl border transition-all cursor-pointer ${
               theme === 'tactical-dark'
@@ -429,41 +290,21 @@ export default function Settings() {
                 : 'border-black/[0.08] bg-white hover:bg-zinc-50'
             }`}
           >
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-1.5">
               <div className="font-extrabold text-sm text-zinc-950 dark:text-white flex items-center gap-2">
                 <Moon className="size-4 text-blue-400" />
-                <span>Tactical Dark CRT</span>
+                <span>Tactical Dark CRT (Dark Mode)</span>
               </div>
-              {theme === 'tactical-dark' && (
-                <span className="size-2 rounded-full bg-emerald-500" />
-              )}
+              {theme === 'tactical-dark' && <CheckCircle2 className="size-4 text-emerald-400" />}
             </div>
-            <div className="text-xs text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed">
-              Ultra-low emission dark CRT aesthetic for evening sessions and minimal ocular glare.
-            </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed">
+              Low-emission dark interface designed for evening sessions and minimal eye strain.
+            </p>
           </button>
         </div>
 
         <div className="grid md:grid-cols-2 gap-4 pt-2">
-          <Field label="Date Display Format">
-            <Select
-              value={dateFormat}
-              onChange={(e) => {
-                setDateFormat(e.target.value)
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem('mercy_date_format', e.target.value)
-                }
-                toast('Date format preference updated', 'ok')
-              }}
-              className="w-full"
-            >
-              <option value="DD/MM/YYYY">DD/MM/YYYY (Indian Standard · 11/10/2026)</option>
-              <option value="YYYY-MM-DD">YYYY-MM-DD (ISO Standard · 2026-10-11)</option>
-              <option value="DD MMM YYYY">DD MMM YYYY (11 Oct 2026)</option>
-            </Select>
-          </Field>
-
-          <Field label="Table Record Density">
+          <Field label="Table Density">
             <Select
               value={tableDensity}
               onChange={(e) => {
@@ -475,169 +316,103 @@ export default function Settings() {
               }}
               className="w-full"
             >
-              <option value="comfortable">Comfortable (Standard judicial spacing)</option>
-              <option value="compact">Compact (High density for large rosters)</option>
+              <option value="comfortable">Comfortable (Standard spacing)</option>
+              <option value="compact">Compact (Dense layout for large rosters)</option>
+            </Select>
+          </Field>
+
+          <Field label="Interface Text Size">
+            <Select
+              value={fontSize}
+              onChange={(e) => {
+                setFontSize(e.target.value)
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('mercy_font_size', e.target.value)
+                }
+                toast('Text size preference updated', 'ok')
+              }}
+              className="w-full"
+            >
+              <option value="standard">Standard (100% - Default)</option>
+              <option value="medium">Medium (110% - Enhanced Readability)</option>
+              <option value="large">Large (120% - High Accessibility)</option>
             </Select>
           </Field>
         </div>
       </Card>
 
-      {/* 3. CLOUD DATABASE & AI INTEGRATION */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Supabase Database Connection */}
-        <Card className="bg-white p-6 sm:p-7 rounded-3xl space-y-5 shadow-sm border border-black/[0.06]">
-          <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
-            <div className="flex items-center gap-3">
-              <div className="size-10 rounded-2xl bg-[#121316] text-white grid place-items-center">
-                <Database className="size-5 text-emerald-400" />
-              </div>
-              <div>
-                <h3 className="font-black text-xs uppercase tracking-wider text-zinc-900">
-                  Supabase Cloud Database
-                </h3>
-                <span
-                  className={`text-[10.5px] font-bold ${
-                    isConfigured ? 'text-emerald-700' : 'text-amber-700'
-                  }`}
-                >
-                  {isConfigured ? '● Connected' : '○ Not Configured'}
-                </span>
-              </div>
-            </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleTestSupabase}
-              disabled={isTestingSupabase}
-              className="rounded-full text-xs flex items-center gap-1.5"
-            >
-              <RefreshCw className={`size-3 ${isTestingSupabase ? 'animate-spin' : ''}`} />
-              <span>{isTestingSupabase ? 'Testing...' : 'Test'}</span>
-            </Button>
+      {/* 3. REGIONAL & DOCKET PREFERENCES */}
+      <Card className="bg-white p-6 sm:p-7 rounded-3xl space-y-5 shadow-sm border border-black/[0.06]">
+        <div className="flex items-center gap-3.5 pb-4 border-b border-black/[0.06]">
+          <div className="size-11 rounded-2xl bg-blue-50 text-blue-900 grid place-items-center">
+            <Globe className="size-5 text-blue-800" />
           </div>
-
-          <form onSubmit={handleSaveSupabase} className="space-y-3.5">
-            <Field label="Project URL">
-              <Input
-                type="url"
-                value={supabaseUrl}
-                onChange={(e) => setSupabaseUrl(e.target.value)}
-                placeholder="https://xyz.supabase.co"
-                required
-              />
-            </Field>
-
-            <Field label="Anon Public API Key">
-              <div className="relative">
-                <Input
-                  type={showSupabaseKey ? 'text' : 'password'}
-                  value={supabaseKey}
-                  onChange={(e) => setSupabaseKey(e.target.value)}
-                  placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowSupabaseKey(!showSupabaseKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 cursor-pointer"
-                >
-                  {showSupabaseKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
-              </div>
-            </Field>
-
-            {supabaseStatus && (
-              <div
-                className={`p-3 rounded-2xl text-xs flex items-start gap-2 border ${
-                  supabaseStatus.success
-                    ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
-                    : 'bg-rose-50 text-rose-900 border-rose-200'
-                }`}
-              >
-                {supabaseStatus.success ? (
-                  <CheckCircle2 className="size-4 text-emerald-600 shrink-0 mt-0.5" />
-                ) : (
-                  <AlertTriangle className="size-4 text-rose-600 shrink-0 mt-0.5" />
-                )}
-                <span>{supabaseStatus.msg}</span>
-              </div>
-            )}
-
-            <Button type="submit" variant="primary" className="w-full rounded-full text-xs font-bold">
-              Save Supabase Connection
-            </Button>
-          </form>
-        </Card>
-
-        {/* Gemini Legal AI */}
-        <Card className="bg-white p-6 sm:p-7 rounded-3xl space-y-5 shadow-sm border border-black/[0.06]">
-          <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
-            <div className="flex items-center gap-3">
-              <div className="size-10 rounded-2xl bg-[#121316] text-white grid place-items-center">
-                <Sparkles className="size-5 text-[#FF5C5C]" />
-              </div>
-              <div>
-                <h3 className="font-black text-xs uppercase tracking-wider text-zinc-900">
-                  Google Gemini Legal AI
-                </h3>
-                <span className="text-[10.5px] font-bold text-emerald-700">
-                  ● Model: gemini-flash-latest
-                </span>
-              </div>
-            </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleTestGemini}
-              disabled={isTestingGemini}
-              className="rounded-full text-xs flex items-center gap-1.5"
-            >
-              <RefreshCw className={`size-3 ${isTestingGemini ? 'animate-spin' : ''}`} />
-              <span>{isTestingGemini ? 'Checking...' : 'Test AI'}</span>
-            </Button>
+          <div>
+            <h2 className="font-black text-sm uppercase tracking-wider text-zinc-900">
+              Regional Formats &amp; Docket Preferences
+            </h2>
+            <p className="text-xs text-zinc-500 font-medium mt-0.5">
+              Standardize date formatting, time clock system, and default cause list views.
+            </p>
           </div>
+        </div>
 
-          <div className="space-y-3.5">
-            <Field label="Gemini API Key" hint="Used for statutory AI research, precedents, and legal chatbot.">
-              <div className="relative">
-                <Input
-                  type={showGeminiKey ? 'text' : 'password'}
-                  value={geminiKey}
-                  onChange={(e) => setGeminiKey(e.target.value)}
-                  placeholder="AIzaSy..."
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowGeminiKey(!showGeminiKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 cursor-pointer"
-                >
-                  {showGeminiKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
-              </div>
-            </Field>
-
-            <div className="p-3 bg-zinc-50 border border-zinc-200/80 rounded-2xl text-xs text-zinc-600">
-              Powers instant cross-statutory citations for BNS 2023, BNSS 2023, BSA 2023, and IPC precedents.
-            </div>
-
-            <Button
-              type="button"
-              variant="primary"
-              onClick={handleSaveGeminiKey}
-              className="w-full rounded-full text-xs font-bold"
+        <div className="grid md:grid-cols-3 gap-4">
+          <Field label="Date Format">
+            <Select
+              value={dateFormat}
+              onChange={(e) => {
+                setDateFormat(e.target.value)
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('mercy_date_format', e.target.value)
+                }
+                toast('Date format saved', 'ok')
+              }}
+              className="w-full"
             >
-              Save Gemini AI Key
-            </Button>
-          </div>
-        </Card>
-      </div>
+              <option value="DD/MM/YYYY">DD/MM/YYYY (Indian Standard · 11/10/2026)</option>
+              <option value="YYYY-MM-DD">YYYY-MM-DD (ISO Standard · 2026-10-11)</option>
+              <option value="DD MMM YYYY">DD MMM YYYY (11 Oct 2026)</option>
+            </Select>
+          </Field>
 
-      {/* 4. NOTIFICATIONS & SECURITY */}
+          <Field label="Clock Format">
+            <Select
+              value={timeFormat}
+              onChange={(e) => {
+                setTimeFormat(e.target.value)
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('mercy_time_format', e.target.value)
+                }
+                toast('Clock format saved', 'ok')
+              }}
+              className="w-full"
+            >
+              <option value="12h">12-Hour Clock (e.g. 10:30 AM)</option>
+              <option value="24h">24-Hour Military (e.g. 10:30)</option>
+            </Select>
+          </Field>
+
+          <Field label="Default Schedule View">
+            <Select
+              value={defaultView}
+              onChange={(e) => {
+                setDefaultView(e.target.value)
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('mercy_default_view', e.target.value)
+                }
+                toast('Schedule view preference saved', 'ok')
+              }}
+              className="w-full"
+            >
+              <option value="today">Today's Cause List</option>
+              <option value="all">Full Upcoming Docket</option>
+            </Select>
+          </Field>
+        </div>
+      </Card>
+
+      {/* 4. NOTIFICATIONS & DOCKET ALARMS */}
       <Card className="bg-white p-6 sm:p-7 rounded-3xl space-y-5 shadow-sm border border-black/[0.06]">
         <div className="flex items-center gap-3.5 pb-4 border-b border-black/[0.06]">
           <div className="size-11 rounded-2xl bg-indigo-50 text-indigo-900 grid place-items-center">
@@ -645,10 +420,10 @@ export default function Settings() {
           </div>
           <div>
             <h2 className="font-black text-sm uppercase tracking-wider text-zinc-900">
-              Court Docket Alarms &amp; Security Controls
+              Hearing Notifications &amp; Docket Alerts
             </h2>
             <p className="text-xs text-zinc-500 font-medium mt-0.5">
-              Automated statutory reminders, hearing schedule alarms, and session lock timeouts.
+              Control automated reminders, hearing alerts, and audible notifications.
             </p>
           </div>
         </div>
@@ -658,7 +433,7 @@ export default function Settings() {
             <div>
               <div className="font-bold text-zinc-900">Scheduled Hearing Reminders</div>
               <div className="text-[11px] text-zinc-500">
-                Notify judge before listed court sessions and docket hearings
+                Show visual notification banner for upcoming bench listings
               </div>
             </div>
             <input
@@ -671,39 +446,83 @@ export default function Settings() {
 
           <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#FAF8F5]">
             <div>
-              <div className="font-bold text-zinc-900">Statutory Bail &amp; Remand Threshold Alarms</div>
+              <div className="font-bold text-zinc-900">Audible Sound Alerts</div>
               <div className="text-[11px] text-zinc-500">
-                Automatic statutory alerts on 60/90 days default bail thresholds under BNSS / CrPC
+                Play subtle chime when a scheduled hearing time arrives
               </div>
             </div>
             <input
               type="checkbox"
-              checked={notifications.statutoryBailAlerts}
-              onChange={(e) => handleToggleNotification('statutoryBailAlerts', e.target.checked)}
+              checked={notifications.soundAlerts}
+              onChange={(e) => handleToggleNotification('soundAlerts', e.target.checked)}
               className="accent-black size-4 cursor-pointer"
             />
           </div>
 
           <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#FAF8F5]">
             <div>
-              <div className="font-bold text-zinc-900">Case Adjournment &amp; Stage Advance Alerts</div>
+              <div className="font-bold text-zinc-900">Case Adjournment Alerts</div>
               <div className="text-[11px] text-zinc-500">
-                Alert on hearing rescheduling and witness examination changes
+                Notify when hearing date or witness schedule is modified
               </div>
             </div>
             <input
               type="checkbox"
-              checked={notifications.caseAdjournmentAlerts}
-              onChange={(e) => handleToggleNotification('caseAdjournmentAlerts', e.target.checked)}
+              checked={notifications.caseAdjournments}
+              onChange={(e) => handleToggleNotification('caseAdjournments', e.target.checked)}
               className="accent-black size-4 cursor-pointer"
             />
           </div>
 
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#FAF8F5]">
+            <div>
+              <div className="font-bold text-zinc-900">Reminder Lead Time</div>
+              <div className="text-[11px] text-zinc-500">
+                How early to alert before listed hearing start time
+              </div>
+            </div>
+            <Select
+              value={leadTime}
+              onChange={(e) => {
+                setLeadTime(e.target.value)
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('mercy_reminder_lead_time', e.target.value)
+                }
+                toast('Reminder lead time saved', 'ok')
+              }}
+              className="text-xs rounded-full h-8"
+            >
+              <option value="5">5 Minutes Before</option>
+              <option value="15">15 Minutes Before</option>
+              <option value="30">30 Minutes Before</option>
+              <option value="60">1 Hour Before</option>
+            </Select>
+          </div>
+        </div>
+      </Card>
+
+      {/* 5. PRIVACY & SECURITY CONTROLS */}
+      <Card className="bg-white p-6 sm:p-7 rounded-3xl space-y-5 shadow-sm border border-black/[0.06]">
+        <div className="flex items-center gap-3.5 pb-4 border-b border-black/[0.06]">
+          <div className="size-11 rounded-2xl bg-zinc-100 text-zinc-900 grid place-items-center">
+            <Lock className="size-5 text-zinc-900" />
+          </div>
+          <div>
+            <h2 className="font-black text-sm uppercase tracking-wider text-zinc-900">
+              Session Security &amp; Courtroom Privacy
+            </h2>
+            <p className="text-xs text-zinc-500 font-medium mt-0.5">
+              Auto-lock idle timers, sensitive witness masking, and delete safety confirmations.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-3.5 text-xs">
           <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#FAF8F5]">
             <div>
               <div className="font-bold text-zinc-900">Auto-Lock Inactivity Period</div>
               <div className="text-[11px] text-zinc-500">
-                Automatically locks the bench session when terminal is idle
+                Automatically lock the bench terminal when idle
               </div>
             </div>
             <Select
@@ -720,13 +539,55 @@ export default function Settings() {
               <option value="5">5 Minutes</option>
               <option value="15">15 Minutes</option>
               <option value="30">30 Minutes</option>
-              <option value="never">Never (Bench Mode)</option>
+              <option value="never">Never (Stay Unlocked)</option>
             </Select>
+          </div>
+
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#FAF8F5]">
+            <div>
+              <div className="font-bold text-zinc-900">Confirmation Dialog Before Deleting</div>
+              <div className="text-[11px] text-zinc-500">
+                Require confirmation before deleting cases, hearings, or records
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={confirmBeforeDelete}
+              onChange={(e) => {
+                setConfirmBeforeDelete(e.target.checked)
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('mercy_confirm_delete', String(e.target.checked))
+                }
+                toast('Safety confirmation updated', 'ok')
+              }}
+              className="accent-black size-4 cursor-pointer"
+            />
+          </div>
+
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#FAF8F5]">
+            <div>
+              <div className="font-bold text-zinc-900">In-Camera Witness Privacy Masking</div>
+              <div className="text-[11px] text-zinc-500">
+                Obfuscate sensitive victim and minor names on secondary public displays
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={maskJuvenileNames}
+              onChange={(e) => {
+                setMaskJuvenileNames(e.target.checked)
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('mercy_mask_juvenile', String(e.target.checked))
+                }
+                toast('Privacy filter preference updated', 'ok')
+              }}
+              className="accent-black size-4 cursor-pointer"
+            />
           </div>
         </div>
       </Card>
 
-      {/* 5. DATA BACKUP & MAINTENANCE */}
+      {/* 6. DATA BACKUP & MAINTENANCE */}
       <Card className="bg-white p-6 sm:p-7 rounded-3xl space-y-5 shadow-sm border border-black/[0.06]">
         <div className="flex items-center gap-3.5 pb-4 border-b border-black/[0.06]">
           <div className="size-11 rounded-2xl bg-emerald-50 text-emerald-900 grid place-items-center">
@@ -734,20 +595,20 @@ export default function Settings() {
           </div>
           <div>
             <h2 className="font-black text-sm uppercase tracking-wider text-zinc-900">
-              Data Backup &amp; Storage Maintenance
+              Backup &amp; Data Maintenance
             </h2>
             <p className="text-xs text-zinc-500 font-medium mt-0.5">
-              Export court dockets as JSON files or reset registry cache.
+              Export court records as offline JSON backup or refresh browser storage.
             </p>
           </div>
         </div>
 
         <div className="grid md:grid-cols-2 gap-4">
-          <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-black/5 flex flex-col justify-between space-y-3">
+          <div className="p-4.5 rounded-2xl bg-[#FAF8F5] border border-black/5 flex flex-col justify-between space-y-3">
             <div>
-              <span className="font-bold text-zinc-900 text-xs block">Export All Court Records</span>
+              <span className="font-bold text-zinc-900 text-xs block">Export Court Records</span>
               <p className="text-[11px] text-zinc-500 mt-1">
-                Download complete JSON snapshot containing all cases, criminals, hearings, punishments, and documents.
+                Download a complete, offline JSON snapshot containing cases, hearings, criminals, decrees, and documents.
               </p>
             </div>
             <Button
@@ -761,11 +622,11 @@ export default function Settings() {
             </Button>
           </div>
 
-          <div className="p-4 rounded-2xl bg-rose-50/60 border border-rose-200/60 flex flex-col justify-between space-y-3">
+          <div className="p-4.5 rounded-2xl bg-rose-50/60 border border-rose-200/60 flex flex-col justify-between space-y-3">
             <div>
               <span className="font-bold text-rose-950 text-xs block">Clear Local Cache</span>
               <p className="text-[11px] text-rose-800/80 mt-1">
-                Purge cached records stored in the browser. Unsynced local items will be cleared.
+                Refresh browser cached data. Live database connections will automatically re-sync.
               </p>
             </div>
             <Button
