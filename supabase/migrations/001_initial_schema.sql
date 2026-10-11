@@ -333,6 +333,16 @@ DO $$ BEGIN
   CREATE POLICY "Allow write access to documents" ON public.documents FOR ALL USING (true);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+DO $$ BEGIN
+  CREATE POLICY "Allow read access to lawyers" ON public.lawyers FOR SELECT USING (true);
+  CREATE POLICY "Allow write access to lawyers" ON public.lawyers FOR ALL USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Allow read access to punishments" ON public.punishments FOR SELECT USING (true);
+  CREATE POLICY "Allow write access to punishments" ON public.punishments FOR ALL USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 -- ==============================================================================
 -- 6. STATUTORY LAW REFERENCE (STATUTORY PROVISIONS FOR JUDICIAL SEARCH)
 -- ==============================================================================

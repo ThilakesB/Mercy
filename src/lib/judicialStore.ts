@@ -624,6 +624,265 @@ class JudicialStoreService {
     }
   }
 
+  public async pushToSupabase(): Promise<{
+    success: boolean
+    counts: {
+      cases: number
+      criminals: number
+      lawyers: number
+      hearings: number
+      punishments: number
+      documents: number
+    }
+    errors: string[]
+  }> {
+    if (!supabase) {
+      return {
+        success: false,
+        counts: { cases: 0, criminals: 0, lawyers: 0, hearings: 0, punishments: 0, documents: 0 },
+        errors: ['Supabase client not initialized or missing configuration in .env'],
+      }
+    }
+
+    const errors: string[] = []
+    let casesCount = 0
+    let criminalsCount = 0
+    let lawyersCount = 0
+    let hearingsCount = 0
+    let punishmentsCount = 0
+    let documentsCount = 0
+
+    // 1. Push Cases
+    try {
+      if (this.cases.length > 0) {
+        const rows = this.cases.map((c) => ({
+          id: c.id,
+          number: c.number,
+          title: c.title,
+          type: c.type,
+          court: c.court,
+          acts: c.acts,
+          stage: c.stage,
+          status: c.status,
+          filing_date: c.filingDate,
+          next_hearing: c.nextHearing,
+          judge: c.judge,
+          police_station: c.policeStation,
+          fir_no: c.fir.no,
+          fir_date: c.fir.date,
+          investigating_officer: c.io.name,
+          summary: c.additionalDetails || '',
+          is_closed: Boolean(c.isClosed),
+        }))
+        const { error } = await supabase.from('cases').upsert(rows)
+        if (error) errors.push(`Cases: ${error.message}`)
+        else casesCount = rows.length
+      }
+    } catch (e: any) {
+      errors.push(`Cases: ${e?.message || e}`)
+    }
+
+    // 2. Push Criminals
+    try {
+      if (this.criminals.length > 0) {
+        const rows = this.criminals.map((cr) => ({
+          id: cr.id,
+          crim_id: cr.crimId,
+          name: cr.name,
+          aliases: cr.aliases,
+          age: cr.age,
+          dob: cr.dob,
+          gender: cr.gender,
+          biometric_hash: cr.biometricHash,
+          recidivism_score: cr.recidivismScore,
+          active_case_number: cr.activeCaseNumber || '',
+          active_case_id: cr.activeCaseId || '',
+          custody_status: cr.custodyStatus,
+          address: cr.address,
+          photo_placeholder: cr.photoPlaceholder,
+          crimes: cr.crimes,
+        }))
+        const { error } = await supabase.from('criminals').upsert(rows)
+        if (error) errors.push(`Criminals: ${error.message}`)
+        else criminalsCount = rows.length
+      }
+    } catch (e: any) {
+      errors.push(`Criminals: ${e?.message || e}`)
+    }
+
+    // 3. Push Lawyers
+    try {
+      if (this.lawyers.length > 0) {
+        const rows = this.lawyers.map((l) => ({
+          id: l.id,
+          bar_number: l.barNumber,
+          name: l.name,
+          chapter: l.chapter,
+          enrolment_year: l.enrolmentYear,
+          standing_years: l.standingYears,
+          active_cases_count: l.activeCasesCount,
+          is_participating_in_bench: l.isParticipatingInBench,
+          clearance_status: l.clearanceStatus,
+          phone: l.phone,
+          email: l.email,
+          chamber: l.chamber,
+        }))
+        const { error } = await supabase.from('lawyers').upsert(rows)
+        if (error) errors.push(`Lawyers: ${error.message}`)
+        else lawyersCount = rows.length
+      }
+    } catch (e: any) {
+      errors.push(`Lawyers: ${e?.message || e}`)
+    }
+
+    // 4. Push Hearings
+    try {
+      if (this.hearings.length > 0) {
+        const rows = this.hearings.map((h) => ({
+          id: h.id,
+          case_id: h.caseId,
+          case_number: h.caseNumber,
+          case_title: h.caseTitle,
+          date: h.date,
+          time: h.time,
+          stage: h.stage,
+          court_hall: h.courtHall,
+          judge: h.judge,
+          bench_notes: h.benchNotes || '',
+          has_alarm: Boolean(h.hasAlarm),
+          alarm_urgency: h.alarmUrgency || 'INFO',
+        }))
+        const { error } = await supabase.from('hearings').upsert(rows)
+        if (error) errors.push(`Hearings: ${error.message}`)
+        else hearingsCount = rows.length
+      }
+    } catch (e: any) {
+      errors.push(`Hearings: ${e?.message || e}`)
+    }
+
+    // 5. Push Punishments
+    try {
+      if (this.punishments.length > 0) {
+        const rows = this.punishments.map((p) => ({
+          id: p.id,
+          case_id: p.caseId,
+          case_number: p.caseNumber,
+          case_title: p.caseTitle,
+          convict_name: p.convictName,
+          crim_id: p.crimId,
+          judge: p.judge,
+          type: p.type,
+          duration_months: p.durationMonths,
+          duration_description: p.durationDescription || '',
+          fine_amount_inr: p.fineAmountInr,
+          pronouncement_date: p.pronouncementDate,
+          operative_text: p.operativeText,
+        }))
+        const { error } = await supabase.from('punishments').upsert(rows)
+        if (error) errors.push(`Punishments: ${error.message}`)
+        else punishmentsCount = rows.length
+      }
+    } catch (e: any) {
+      errors.push(`Punishments: ${e?.message || e}`)
+    }
+
+    // 6. Push Documents
+    try {
+      if (this.documents.length > 0) {
+        const rows = this.documents.map((d) => ({
+          id: d.id,
+          case_id: d.caseId,
+          case_number: d.caseNumber,
+          canonical_name: d.canonicalName,
+          original_file_name: d.originalFileName,
+          submitting_party: d.submittingParty,
+          advocate_or_officer: d.advocateOrOfficer,
+          submission_date: d.submissionDate,
+          file_size: d.fileSize,
+          pages: d.pages,
+          kind: d.kind,
+          sha256: d.sha256,
+          ocr_excerpt: d.ocrExcerpt || '',
+        }))
+        const { error } = await supabase.from('documents').upsert(rows)
+        if (error) errors.push(`Documents: ${error.message}`)
+        else documentsCount = rows.length
+      }
+    } catch (e: any) {
+      errors.push(`Documents: ${e?.message || e}`)
+    }
+
+    return {
+      success: errors.length === 0,
+      counts: {
+        cases: casesCount,
+        criminals: criminalsCount,
+        lawyers: lawyersCount,
+        hearings: hearingsCount,
+        punishments: punishmentsCount,
+        documents: documentsCount,
+      },
+      errors,
+    }
+  }
+
+  public async testDatabaseConnection(): Promise<{
+    connected: boolean
+    latencyMs: number
+    supabaseUrl: string
+    tablesStatus: Record<string, boolean>
+    error?: string
+  }> {
+    if (!supabase) {
+      return {
+        connected: false,
+        latencyMs: 0,
+        supabaseUrl: '',
+        tablesStatus: {},
+        error: 'Supabase client not initialized',
+      }
+    }
+
+    const start = performance.now()
+    const tables = ['cases', 'lawyers', 'criminals', 'hearings', 'punishments', 'documents']
+    const tablesStatus: Record<string, boolean> = {}
+
+    try {
+      const results = await Promise.all(
+        tables.map(async (tbl) => {
+          try {
+            const { error } = await supabase!.from(tbl).select('id').limit(1)
+            return { tbl, ok: !error }
+          } catch {
+            return { tbl, ok: false }
+          }
+        })
+      )
+
+      results.forEach((r) => {
+        tablesStatus[r.tbl] = r.ok
+      })
+
+      const latency = Math.round(performance.now() - start)
+      const hasAnyOk = Object.values(tablesStatus).some(Boolean)
+
+      return {
+        connected: hasAnyOk,
+        latencyMs: latency,
+        supabaseUrl: import.meta.env.VITE_SUPABASE_URL || 'https://vodrmtqzqrmrcevmlvyg.supabase.co',
+        tablesStatus,
+      }
+    } catch (e: any) {
+      return {
+        connected: false,
+        latencyMs: Math.round(performance.now() - start),
+        supabaseUrl: import.meta.env.VITE_SUPABASE_URL || '',
+        tablesStatus,
+        error: e?.message || 'Connection timeout or network failure',
+      }
+    }
+  }
+
   public subscribe(fn: () => void): () => void {
     this.listeners.add(fn)
     return () => this.listeners.delete(fn)
