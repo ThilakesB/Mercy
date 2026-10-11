@@ -26,8 +26,11 @@ import {
   Search,
   Check,
   Sparkles,
+  Globe,
+  Loader2,
 } from 'lucide-react'
 import { judicialStore, type FullCaseRecord } from '../lib/judicialStore'
+import { fetchDistrictCourtCase } from '../lib/ecourtsApi'
 import { useApp } from '../ui'
 
 interface ComprehensiveCaseIntakeModalProps {
@@ -92,6 +95,37 @@ export default function ComprehensiveCaseIntakeModal({
 
   const handleRemoveSection = (sec: string) => {
     setStatutorySections(statutorySections.filter((s) => s !== sec))
+  }
+
+  // eCourts CIS API quick auto-populate state
+  const [ecourtCnrInput, setEcourtCnrInput] = useState('DLST020314162024')
+  const [isFetchingEcourtCnr, setIsFetchingEcourtCnr] = useState(false)
+
+  const handleEcourtIntakeLookup = async (cnrToFetch?: string) => {
+    const cnr = (cnrToFetch || ecourtCnrInput).trim()
+    if (!cnr) return
+    setIsFetchingEcourtCnr(true)
+    try {
+      const res = await fetchDistrictCourtCase(cnr)
+      const data = res.data
+      setCourtName(data.courtName)
+      setJudgeName(data.presidingJudge)
+      setPoliceStation(data.policeStation)
+      setFirNumber(data.firNumber)
+      setFilingDate(data.filingDate)
+      setCaseStatus('Trial')
+      const newSections = data.actsAndSections.map((a) => `${a.act} - ${a.section}`)
+      setStatutorySections(Array.from(new Set([...statutorySections, ...newSections])))
+      setCaseSummary(
+        `Sessions trial ${data.caseNumber} (CNR: ${data.cnr}) before ${data.courtName}. ` +
+        `State Prosecutor: ${data.petitionerAdvocate}. Defense: ${data.respondentAdvocate}. FIR: ${data.firNumber} (${data.policeStation}).`
+      )
+      toast(`Auto-populated case details from eCourts CIS (${data.cnr})!`, 'ok')
+    } catch (e) {
+      toast('Failed to query eCourts CIS API', 'error')
+    } finally {
+      setIsFetchingEcourtCnr(false)
+    }
   }
 
   // =========================================================================
@@ -753,6 +787,56 @@ export default function ComprehensiveCaseIntakeModal({
                 <p className="text-xs text-zinc-500">
                   Assign statutory classification, FIR provenance, and applied legal sections.
                 </p>
+              </div>
+
+              {/* eCourts CIS Quick Import Bar */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-slate-50 border border-blue-200/80 space-y-2.5 text-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-md bg-blue-600 text-white font-mono font-bold text-[10px]">
+                      CIS API
+                    </span>
+                    <span className="font-bold text-zinc-900 text-[11px]">
+                      Auto-Populate from District Court eCourts Registry
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEcourtCnrInput('DLST020314162024')
+                      handleEcourtIntakeLookup('DLST020314162024')
+                    }}
+                    className="text-[10px] text-blue-600 font-bold hover:underline"
+                  >
+                    Quick Fill Saket CNR: DLST020314162024
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Globe className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-zinc-400" />
+                    <input
+                      type="text"
+                      value={ecourtCnrInput}
+                      onChange={(e) => setEcourtCnrInput(e.target.value.toUpperCase())}
+                      placeholder="Enter 16-character CNR (e.g. DLST020314162024)"
+                      className="w-full h-9 pl-8 pr-3 rounded-xl border border-blue-200 bg-white font-mono text-xs font-bold text-zinc-800 outline-none"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isFetchingEcourtCnr}
+                    onClick={() => handleEcourtIntakeLookup()}
+                    className="h-9 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition flex items-center gap-1.5 disabled:opacity-50 shrink-0"
+                  >
+                    {isFetchingEcourtCnr ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Search className="size-3.5" />
+                    )}
+                    Fetch CIS Docket
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">

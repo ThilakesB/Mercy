@@ -1179,6 +1179,110 @@ class JudicialStoreService {
     )
   }
 
+  public addLawyer(lawyerData: Omit<LawyerRecord, 'id'> & { id?: string }): LawyerRecord {
+    const id = lawyerData.id || `law-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`
+    const newLawyer: LawyerRecord = {
+      ...lawyerData,
+      id,
+    }
+    this.lawyers.unshift(newLawyer)
+    this.notify()
+
+    if (supabase) {
+      try {
+        supabase
+          .from('lawyers')
+          .upsert({
+            id: newLawyer.id,
+            bar_number: newLawyer.barNumber,
+            name: newLawyer.name,
+            chapter: newLawyer.chapter,
+            enrolment_year: newLawyer.enrolmentYear,
+            standing_years: newLawyer.standingYears,
+            active_cases_count: newLawyer.activeCasesCount,
+            is_participating_in_bench: newLawyer.isParticipatingInBench,
+            clearance_status: newLawyer.clearanceStatus,
+            phone: newLawyer.phone,
+            email: newLawyer.email,
+            chamber: newLawyer.chamber,
+          })
+          .then(() => {})
+          .catch(() => {})
+      } catch (e) {
+        console.warn('Supabase upsert lawyer error:', e)
+      }
+    }
+
+    return newLawyer
+  }
+
+  public updateLawyer(idOrBar: string, updates: Partial<LawyerRecord>): LawyerRecord | undefined {
+    const idx = this.lawyers.findIndex(
+      (l) => l.id === idOrBar || l.barNumber.toLowerCase() === idOrBar.toLowerCase()
+    )
+    if (idx === -1) return undefined
+    this.lawyers[idx] = {
+      ...this.lawyers[idx],
+      ...updates,
+    }
+    this.notify()
+
+    if (supabase) {
+      try {
+        const updated = this.lawyers[idx]
+        supabase
+          .from('lawyers')
+          .update({
+            bar_number: updated.barNumber,
+            name: updated.name,
+            chapter: updated.chapter,
+            enrolment_year: updated.enrolmentYear,
+            standing_years: updated.standingYears,
+            active_cases_count: updated.activeCasesCount,
+            is_participating_in_bench: updated.isParticipatingInBench,
+            clearance_status: updated.clearanceStatus,
+            phone: updated.phone,
+            email: updated.email,
+            chamber: updated.chamber,
+          })
+          .eq('id', updated.id)
+          .then(() => {})
+          .catch(() => {})
+      } catch (e) {
+        console.warn('Supabase update lawyer error:', e)
+      }
+    }
+
+    return this.lawyers[idx]
+  }
+
+  public deleteLawyer(idOrBar: string): boolean {
+    const prevLen = this.lawyers.length
+    const toDelete = this.lawyers.find(
+      (l) => l.id === idOrBar || l.barNumber.toLowerCase() === idOrBar.toLowerCase()
+    )
+    this.lawyers = this.lawyers.filter(
+      (l) => l.id !== idOrBar && l.barNumber.toLowerCase() !== idOrBar.toLowerCase()
+    )
+    if (this.lawyers.length !== prevLen) {
+      this.notify()
+      if (supabase && toDelete) {
+        try {
+          supabase
+            .from('lawyers')
+            .delete()
+            .eq('id', toDelete.id)
+            .then(() => {})
+            .catch(() => {})
+        } catch (e) {
+          console.warn('Supabase delete lawyer error:', e)
+        }
+      }
+      return true
+    }
+    return false
+  }
+
   // --------------------------------------------------------------------------
   // SCHEDULE & HEARINGS
   // --------------------------------------------------------------------------
