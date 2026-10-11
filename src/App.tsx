@@ -23,6 +23,8 @@ import Summary from "./pages/Summary"
 import Alerts from "./pages/Alerts"
 import Public from "./pages/Public"
 import Admin from "./pages/Admin"
+import CaseOverview from "./pages/CaseOverview"
+import CaseWorkflow from "./pages/CaseWorkflow"
 import { Button, Card, EmptyState, useApp } from "./ui"
 import { Navigate } from "react-router"
 
@@ -49,6 +51,20 @@ const router = createBrowserRouter([
     Component: Layout,
     children: [
       { index: true, Component: Dashboard },
+      { path: "dashboard", Component: Dashboard },
+
+      // 8-Step Judicial Intake and Case Workflow Routes
+      { path: "case/new/details", Component: CaseWorkflow },
+      { path: "case/:id/details", Component: CaseWorkflow },
+      { path: "case/:id/accused", Component: CaseWorkflow },
+      { path: "case/:id/victims", Component: CaseWorkflow },
+      { path: "case/:id/witnesses", Component: CaseWorkflow },
+      { path: "case/:id/evidence", Component: CaseWorkflow },
+      { path: "case/:id/investigation", Component: CaseWorkflow },
+      { path: "case/:id/judgement-documents", Component: CaseWorkflow },
+      { path: "case/:id/review", Component: CaseWorkflow },
+      { path: "case/:id", Component: CaseOverview },
+
       { path: "cases", Component: Cases },
       { path: "cases/new", Component: CasesNew },
       { path: "cases/final-judgment", Component: CasesNew },

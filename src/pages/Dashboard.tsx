@@ -25,6 +25,7 @@ import {
   UploadCloud,
   FilePlus,
   BookOpen,
+  Briefcase,
 } from 'lucide-react'
 import {
   judicialStore,
@@ -65,6 +66,23 @@ export default function Dashboard() {
   // Selected case for the bottom preview card
   const [selectedCaseId, setSelectedCaseId] = useState<string>(cases[0]?.id || '')
   const selectedCase = cases.find((c) => c.id === selectedCaseId) || cases[0]
+
+  // Dashboard Case Search & Overdue Filter
+  const [dashboardSearch, setDashboardSearch] = useState('')
+  const [filterOverdueOnly, setFilterOverdueOnly] = useState(false)
+
+  const filteredDashboardCases = cases.filter((c) => {
+    if (filterOverdueOnly && c.status !== 'overdue') return false
+    if (!dashboardSearch.trim()) return true
+    const q = dashboardSearch.toLowerCase().trim()
+    const matchNumber = c.number.toLowerCase().includes(q)
+    const matchTitle = c.title.toLowerCase().includes(q)
+    const matchAccused = c.parties.some(
+      (p) => p.role === 'Accused' && p.name.toLowerCase().includes(q)
+    )
+    const matchIo = c.io?.name.toLowerCase().includes(q)
+    return matchNumber || matchTitle || matchAccused || matchIo
+  })
 
   // Live Courtroom Date & Time
   const [now, setNow] = useState<Date>(new Date())
@@ -587,6 +605,160 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+
+          {/* ===================================================================== */}
+          {/* SEARCH & CASE CARDS REGISTRY (ACCUSED NAME / CNR SEARCH + OVERDUE BADGES) */}
+          {/* ===================================================================== */}
+          <Card className="p-5.5 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                  <Briefcase className="size-4 text-[#FF5C5C]" />
+                  Active Judicial Cases &amp; Docket Registry
+                </h3>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Search by accused name or case number. Overdue dockets display an Action Required badge.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Link to="/case/new/details">
+                  <Button variant="primary" size="sm" className="text-xs">
+                    <Plus className="size-3.5 mr-1" />
+                    + New Case Pipeline
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            {/* Search Bar & Overdue Filter Toggle */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="size-4 text-zinc-400 absolute left-3.5 top-3" />
+                <Input
+                  value={dashboardSearch}
+                  onChange={(e) => setDashboardSearch(e.target.value)}
+                  placeholder="Search by accused name, CNR case number, or title..."
+                  className="pl-9.5 text-xs h-10 w-full"
+                />
+                {dashboardSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setDashboardSearch('')}
+                    className="absolute right-3 top-3 text-xs text-zinc-400 hover:text-black cursor-pointer font-bold"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setFilterOverdueOnly(!filterOverdueOnly)}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                    filterOverdueOnly
+                      ? 'bg-rose-600 text-white shadow-xs'
+                      : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
+                  }`}
+                >
+                  <AlertTriangle className="size-3.5" />
+                  Action Required ({cases.filter((c) => c.status === 'overdue').length})
+                </button>
+                <span className="text-xs font-semibold px-2.5 py-2 rounded-xl bg-zinc-100 text-zinc-600">
+                  {filteredDashboardCases.length} of {cases.length} Cases
+                </span>
+              </div>
+            </div>
+
+            {/* Case Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 pt-1">
+              {filteredDashboardCases.length === 0 ? (
+                <div className="col-span-full p-8 text-center rounded-2xl bg-zinc-50 border border-zinc-100 text-xs text-zinc-400">
+                  No cases found matching "{dashboardSearch}".
+                </div>
+              ) : (
+                filteredDashboardCases.map((c) => {
+                  const isOverdue = c.status === 'overdue'
+                  const primaryAccused = c.parties.find((p) => p.role === 'Accused')?.name || 'Accused'
+
+                  return (
+                    <div
+                      key={c.id}
+                      className={`p-4 rounded-2xl border transition-all hover:shadow-md space-y-3 relative flex flex-col justify-between ${
+                        isOverdue
+                          ? 'bg-rose-50/70 border-rose-200 text-rose-950'
+                          : 'bg-white border-zinc-200 hover:border-zinc-300'
+                      }`}
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="font-mono text-[11px] font-black px-2 py-0.5 rounded bg-zinc-900 text-white">
+                            {c.number}
+                          </span>
+
+                          {/* ACTION REQUIRED BADGE FOR OVERDUE CASES */}
+                          {isOverdue ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-extrabold uppercase tracking-wider animate-pulse shadow-xs">
+                              <AlertTriangle className="size-2.5 stroke-[3]" />
+                              Action Required
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold uppercase">
+                              {c.status}
+                            </span>
+                          )}
+                        </div>
+
+                        <div>
+                          <h4 className="font-bold text-xs leading-snug line-clamp-1 text-zinc-900">
+                            {c.title}
+                          </h4>
+                          <div className="text-[11px] text-zinc-600 mt-0.5 flex items-center gap-1">
+                            <span className="font-bold">Accused:</span>
+                            <span className="font-medium truncate">{primaryAccused}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-1 text-[10px] font-semibold pt-1">
+                          <span className="px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-700">
+                            {c.type}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-700">
+                            {c.stage}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-700">
+                            Next: {c.nextHearing}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="pt-3 border-t border-black/5 flex items-center justify-between gap-2">
+                        <Link to={`/case/${c.id}`} className="flex-1">
+                          <button
+                            type="button"
+                            className="w-full py-1.5 px-2.5 rounded-xl bg-zinc-900 hover:bg-black text-white text-[11px] font-bold transition-colors cursor-pointer flex items-center justify-center gap-1"
+                          >
+                            <span>Case Overview</span>
+                            <ArrowRight className="size-3" />
+                          </button>
+                        </Link>
+                        <Link to={`/case/${c.id}/details`}>
+                          <button
+                            type="button"
+                            className="py-1.5 px-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-[11px] font-bold transition-colors cursor-pointer"
+                            title="Edit 8-step pipeline"
+                          >
+                            <Edit className="size-3" />
+                          </button>
+                        </Link>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </Card>
 
           {/* Listed Matters & Dossier Split Grid */}
           <div className="grid gap-6 md:grid-cols-2">
