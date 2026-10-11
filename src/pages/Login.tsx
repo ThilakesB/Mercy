@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router'
+import { useState, useEffect } from "react"
+import { useNavigate } from "react-router"
 import {
   Scale,
   Lock,
@@ -22,12 +22,12 @@ import {
   LogOut,
   QrCode,
   Award,
-} from 'lucide-react'
-import { useApp } from '../ui'
-import { supabase } from '../lib/supabase'
-import { signInWithGoogle, signOutFromFirebase } from '../lib/firebase'
+} from "lucide-react"
+import { useApp } from "../ui"
+import { supabase } from "../lib/supabase"
+import { signInWithGoogle, signOutFromFirebase } from "../lib/firebase"
 
-function GoogleIcon({ className = 'size-4' }: { className?: string }) {
+function GoogleIcon({ className = "size-4" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none">
       <path
@@ -54,51 +54,42 @@ interface HandPlateData {
   name: string
   email: string
   photoURL: string | null
-  role: 'Judge' | 'Clerk' | 'Admin'
+  role: "Judge" | "Clerk" | "Admin"
   uid: string
-  authMethod: 'google' | 'supabase_password'
+  authMethod: "google" | "supabase_password"
   supabaseSaved: boolean
   timestamp: string
   date: string
 }
 
 export default function Login() {
-  const { setRole, setAuthed, setUser, toast, authed, user, isAuthReady } = useApp()
+  const { setRole, setAuthed, setUser, toast, authed, user, isAuthReady } =
+    useApp()
   const nav = useNavigate()
 
   // Mode: 'signin' or 'signup'
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin')
+  const [mode, setMode] = useState<"signin" | "signup">("signin")
 
   // Sign In Form State
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
 
   // Sign Up Form State
-  const [signupName, setSignupName] = useState('')
-  const [signupEmail, setSignupEmail] = useState('')
-  const [signupPassword, setSignupPassword] = useState('')
-  const [signupConfirmPassword, setSignupConfirmPassword] = useState('')
-  const [signupRole, setSignupRole] = useState<'Judge' | 'Clerk' | 'Admin'>('Judge')
+  const [signupName, setSignupName] = useState("")
+  const [signupEmail, setSignupEmail] = useState("")
+  const [signupPassword, setSignupPassword] = useState("")
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState("")
+  const [signupRole, setSignupRole] = useState<"Judge" | "Clerk" | "Admin">(
+    "Judge",
+  )
   const [showSignupPassword, setShowSignupPassword] = useState(false)
 
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
-  const [err, setErr] = useState('')
+  const [err, setErr] = useState("")
   const [copiedPlate, setCopiedPlate] = useState(false)
-
-  // Blue Takeover Logging Animation State
-  const [blueTakeover, setBlueTakeover] = useState<{
-    active: boolean
-    title: string
-    subtitle: string
-    officerName: string
-    photoURL: string | null
-    provider: 'google' | 'password'
-    progress: number
-    stage: number
-  } | null>(null)
 
   // Hand Plate State
   const [handPlate, setHandPlate] = useState<HandPlateData | null>(null)
@@ -109,7 +100,7 @@ export default function Login() {
   useEffect(() => {
     if (!handPlate || isPaused) return
     if (countdown <= 0) {
-      nav('/', { replace: true })
+      nav("/", { replace: true })
       return
     }
     const timer = setTimeout(() => {
@@ -122,18 +113,35 @@ export default function Login() {
   useEffect(() => {
     if (isAuthReady && authed && user?.email && !handPlate) {
       // Create handplate view from current authenticated user session so user can view credentials
-      const savedUsers = JSON.parse(localStorage.getItem('mercy_registered_users') || '[]')
-      const matched = savedUsers.find((u: any) => u.email.toLowerCase() === user.email.toLowerCase())
+      const savedUsers = JSON.parse(
+        localStorage.getItem("mercy_registered_users") || "[]",
+      )
+      const matched = savedUsers.find(
+        (u: any) => u.email.toLowerCase() === user.email.toLowerCase(),
+      )
       setHandPlate({
-        name: user.name || user.email.split('@')[0],
+        name: user.name || user.email.split("@")[0],
         email: user.email,
         photoURL: user.photoURL || null,
-        role: matched?.role || 'Judge',
-        uid: matched?.authUid || 'BENCH-04-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
-        authMethod: matched?.provider === 'google' || user.photoURL ? 'google' : 'supabase_password',
+        role: matched?.role || "Judge",
+        uid:
+          matched?.authUid ||
+          "BENCH-04-" +
+            Math.random().toString(36).substring(2, 8).toUpperCase(),
+        authMethod:
+          matched?.provider === "google" || user.photoURL
+            ? "google"
+            : "supabase_password",
         supabaseSaved: true,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        date: new Date().toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        }),
       })
     }
   }, [isAuthReady, authed, user])
@@ -142,10 +150,10 @@ export default function Login() {
   const persistUserToDatabases = async (
     name: string,
     userEmail: string,
-    role: 'Judge' | 'Clerk' | 'Admin',
+    role: "Judge" | "Clerk" | "Admin",
     photoURL: string | null,
-    provider: 'google' | 'password',
-    uid: string
+    provider: "google" | "password",
+    uid: string,
   ): Promise<boolean> => {
     let supabaseSuccess = false
     const normalizedEmail = userEmail.trim().toLowerCase()
@@ -153,7 +161,7 @@ export default function Login() {
     // 1. Save/Upsert into Supabase `profiles` table
     if (supabase) {
       try {
-        const { error: supaErr } = await supabase.from('profiles').upsert(
+        const { error: supaErr } = await supabase.from("profiles").upsert(
           {
             full_name: name,
             official_email: normalizedEmail,
@@ -161,31 +169,37 @@ export default function Login() {
             active: true,
             avatar_url: photoURL,
           },
-          { onConflict: 'official_email' }
+          { onConflict: "official_email" },
         )
         if (!supaErr) {
           supabaseSuccess = true
         } else {
-          console.warn('Supabase profile upsert warning:', supaErr.message)
+          console.warn("Supabase profile upsert warning:", supaErr.message)
           // Try standard insert/update without conflict option in case schema doesn't have onConflict constraint
-          const { error: fallbackErr } = await supabase.from('profiles').upsert({
-            full_name: name,
-            official_email: normalizedEmail,
-            role: role.toLowerCase(),
-            active: true,
-          })
+          const { error: fallbackErr } = await supabase
+            .from("profiles")
+            .upsert({
+              full_name: name,
+              official_email: normalizedEmail,
+              role: role.toLowerCase(),
+              active: true,
+            })
           if (!fallbackErr) supabaseSuccess = true
         }
       } catch (e) {
-        console.warn('Supabase operation notice:', e)
+        console.warn("Supabase operation notice:", e)
       }
     }
 
     // 2. Persist in local storage repository `mercy_registered_users`
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       try {
-        const savedUsers = JSON.parse(localStorage.getItem('mercy_registered_users') || '[]')
-        const existingIdx = savedUsers.findIndex((u: any) => u.email.toLowerCase() === normalizedEmail)
+        const savedUsers = JSON.parse(
+          localStorage.getItem("mercy_registered_users") || "[]",
+        )
+        const existingIdx = savedUsers.findIndex(
+          (u: any) => u.email.toLowerCase() === normalizedEmail,
+        )
         const entry = {
           name,
           email: normalizedEmail,
@@ -195,16 +209,22 @@ export default function Login() {
           authUid: uid,
           syncedToSupabase: true,
           lastActive: new Date().toISOString(),
-          createdAt: existingIdx >= 0 ? savedUsers[existingIdx].createdAt : new Date().toISOString(),
+          createdAt:
+            existingIdx >= 0
+              ? savedUsers[existingIdx].createdAt
+              : new Date().toISOString(),
         }
         if (existingIdx >= 0) {
           savedUsers[existingIdx] = { ...savedUsers[existingIdx], ...entry }
         } else {
           savedUsers.push(entry)
         }
-        localStorage.setItem('mercy_registered_users', JSON.stringify(savedUsers))
+        localStorage.setItem(
+          "mercy_registered_users",
+          JSON.stringify(savedUsers),
+        )
       } catch (storageErr) {
-        console.warn('Local storage write warning:', storageErr)
+        console.warn("Local storage write warning:", storageErr)
       }
     }
 
@@ -217,123 +237,41 @@ export default function Login() {
     setRole(role)
     setAuthed(true)
 
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('mercy_authed', 'true')
+    if (typeof window !== "undefined") {
+      localStorage.setItem("mercy_authed", "true")
       localStorage.setItem(
-        'mercy_user',
+        "mercy_user",
         JSON.stringify({
           name,
           email: normalizedEmail,
           photoURL,
-        })
+        }),
       )
     }
 
     return supabaseSuccess
   }
 
-  // Play the smooth Blue Takeover animation sequence
-  const playBlueTakeover = async (
-    officerName: string,
-    userEmail: string,
-    photoURL: string | null,
-    role: 'Judge' | 'Clerk' | 'Admin',
-    provider: 'google' | 'password',
-    uid: string,
-    supabaseSaved: boolean
-  ) => {
-    // Step 1: Initialize takeover
-    setBlueTakeover({
-      active: true,
-      title: provider === 'google' ? 'Google Firebase Handshake' : 'Judicial Security Handshake',
-      subtitle: 'Acquiring encrypted bench session token...',
-      officerName,
-      photoURL,
-      provider,
-      progress: 25,
-      stage: 1,
-    })
-
-    await new Promise((r) => setTimeout(r, 450))
-
-    // Step 2: Supabase sync
-    setBlueTakeover((prev) =>
-      prev
-        ? {
-            ...prev,
-            progress: 60,
-            stage: 2,
-            subtitle: 'Reflecting record in Supabase Postgres & local vaults...',
-          }
-        : null
-    )
-
-    await new Promise((r) => setTimeout(r, 450))
-
-    // Step 3: Commissioning Hand Plate
-    setBlueTakeover((prev) =>
-      prev
-        ? {
-            ...prev,
-            progress: 90,
-            stage: 3,
-            subtitle: 'Commissioning Supreme Bench 04 on-hand credentials plate...',
-          }
-        : null
-    )
-
-    await new Promise((r) => setTimeout(r, 400))
-
-    // Step 4: Finalize & transition into Hand Plate view
-    setBlueTakeover((prev) =>
-      prev
-        ? {
-            ...prev,
-            progress: 100,
-            stage: 4,
-            subtitle: 'Access Clearance Approved. Hand Plate Issued.',
-          }
-        : null
-    )
-
-    await new Promise((r) => setTimeout(r, 350))
-
-    setBlueTakeover(null)
-
-    // Hand Plate is presented
-    setHandPlate({
-      name: officerName,
-      email: userEmail,
-      photoURL,
-      role,
-      uid,
-      authMethod: provider === 'google' ? 'google' : 'supabase_password',
-      supabaseSaved,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-    })
-    setCountdown(5)
-    setIsPaused(false)
-  }
-
   // =========================================================================
   // HANDLE GOOGLE AUTHENTICATION (Available for both Sign In and Sign Up)
   // =========================================================================
-  const handleGoogleAuth = async (currentMode: 'signin' | 'signup') => {
-    setErr('')
+  const handleGoogleAuth = async (currentMode: "signin" | "signup") => {
+    setErr("")
     setIsGoogleLoading(true)
 
     try {
       const gUser = await signInWithGoogle()
 
       if (!gUser || !gUser.email) {
-        throw new Error('Google authentication did not return a valid email address.')
+        throw new Error(
+          "Google authentication did not return a valid email address.",
+        )
       }
 
-      const gName = gUser.displayName || gUser.email.split('@')[0]
+      const gName = gUser.displayName || gUser.email.split("@")[0]
       const gEmail = gUser.email.toLowerCase()
       const gPhoto = gUser.photoURL || null
-      const assignedRole = currentMode === 'signup' ? signupRole : 'Judge'
+      const assignedRole = currentMode === "signup" ? signupRole : "Judge"
 
       // Save and reflect in Supabase database & local repository
       const supaSynced = await persistUserToDatabases(
@@ -341,30 +279,50 @@ export default function Login() {
         gEmail,
         assignedRole,
         gPhoto,
-        'google',
-        gUser.uid
-      )
-
-      // Play smooth blue takeover animation before showing Hand Plate
-      await playBlueTakeover(
-        gName,
-        gEmail,
-        gPhoto,
-        assignedRole,
-        'google',
+        "google",
         gUser.uid,
-        supaSynced || true
       )
 
-      toast(`Authenticated with Google as ${gName}. Hand Plate credentials ready.`, 'ok')
+      // Provide the result on the Hand Plate
+      setHandPlate({
+        name: gName,
+        email: gEmail,
+        photoURL: gPhoto,
+        role: assignedRole,
+        uid: gUser.uid,
+        authMethod: "google",
+        supabaseSaved: supaSynced || true,
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }),
+        date: new Date().toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        }),
+      })
+      setCountdown(5)
+      setIsPaused(false)
+
+      toast(
+        `Authenticated with Google as ${gName}. Hand Plate credentials ready.`,
+        "ok",
+      )
     } catch (googleError: any) {
-      console.error('Google auth error:', googleError)
-      if (googleError?.code === 'auth/popup-closed-by-user') {
-        setErr('Google sign-in popup was cancelled before completion.')
-      } else if (googleError?.code === 'auth/popup-blocked') {
-        setErr('Popup was blocked by the browser. Please allow popups for this portal.')
+      console.error("Google auth error:", googleError)
+      if (googleError?.code === "auth/popup-closed-by-user") {
+        setErr("Google sign-in popup was cancelled before completion.")
+      } else if (googleError?.code === "auth/popup-blocked") {
+        setErr(
+          "Popup was blocked by the browser. Please allow popups for this portal.",
+        )
       } else {
-        setErr(googleError?.message || 'Failed to authenticate with Google. Please retry.')
+        setErr(
+          googleError?.message ||
+            "Failed to authenticate with Google. Please retry.",
+        )
       }
     } finally {
       setIsGoogleLoading(false)
@@ -376,16 +334,17 @@ export default function Login() {
   // =========================================================================
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setErr('')
+    setErr("")
     setIsLoading(true)
 
     const normalizedEmail = email.trim().toLowerCase()
 
     try {
       let authedSuccess = false
-      let userName = ''
-      let userRole: 'Judge' | 'Clerk' | 'Admin' = 'Judge'
-      let userUid = 'LOCAL-' + Math.random().toString(36).substring(2, 9).toUpperCase()
+      let userName = ""
+      let userRole: "Judge" | "Clerk" | "Admin" = "Judge"
+      let userUid =
+        "LOCAL-" + Math.random().toString(36).substring(2, 9).toUpperCase()
 
       // 1. Try Supabase Auth password authentication
       if (supabase) {
@@ -396,8 +355,10 @@ export default function Login() {
           })
           if (!error && data?.user) {
             authedSuccess = true
-            userName = data.user.user_metadata?.full_name || normalizedEmail.split('@')[0]
-            userRole = (data.user.user_metadata?.role as any) || 'Judge'
+            userName =
+              data.user.user_metadata?.full_name ||
+              normalizedEmail.split("@")[0]
+            userRole = data.user.user_metadata?.role as any || "Judge"
             userUid = data.user.id
           }
         } catch {
@@ -406,16 +367,20 @@ export default function Login() {
       }
 
       // 2. Check locally registered users database
-      if (!authedSuccess && typeof window !== 'undefined') {
+      if (!authedSuccess && typeof window !== "undefined") {
         try {
-          const savedUsers = JSON.parse(localStorage.getItem('mercy_registered_users') || '[]')
+          const savedUsers = JSON.parse(
+            localStorage.getItem("mercy_registered_users") || "[]",
+          )
           const matched = savedUsers.find(
-            (u: any) => u.email.toLowerCase() === normalizedEmail && u.password === password
+            (u: any) =>
+              u.email.toLowerCase() === normalizedEmail &&
+              u.password === password,
           )
           if (matched) {
             authedSuccess = true
             userName = matched.name
-            userRole = matched.role || 'Judge'
+            userRole = matched.role || "Judge"
             userUid = matched.authUid || userUid
           }
         } catch {
@@ -426,36 +391,58 @@ export default function Login() {
       // 3. Fallback default presiding judge credential
       if (
         !authedSuccess &&
-        ['thilakesb@gmail.com', 'bthilakes@gmail.com'].includes(normalizedEmail) &&
-        password === 'Thilak@2006'
+        ["thilakesb@gmail.com", "bthilakes@gmail.com"].includes(
+          normalizedEmail,
+        ) &&
+        password === "Thilak@2006"
       ) {
         authedSuccess = true
-        userName = 'Thilakeswaran B'
-        userRole = 'Judge'
+        userName = "Thilakeswaran B"
+        userRole = "Judge"
       }
 
       if (authedSuccess) {
-        const resolvedName = userName || normalizedEmail.split('@')[0]
-        await persistUserToDatabases(resolvedName, normalizedEmail, userRole, null, 'password', userUid)
-
-        // Play smooth blue takeover animation
-        await playBlueTakeover(
+        const resolvedName = userName || normalizedEmail.split("@")[0]
+        await persistUserToDatabases(
           resolvedName,
           normalizedEmail,
-          null,
           userRole,
-          'password',
+          null,
+          "password",
           userUid,
-          true
         )
 
-        toast(`Welcome back, ${resolvedName}! Hand Plate issued.`, 'ok')
+        // Show Hand Plate
+        setHandPlate({
+          name: resolvedName,
+          email: normalizedEmail,
+          photoURL: null,
+          role: userRole,
+          uid: userUid,
+          authMethod: "supabase_password",
+          supabaseSaved: true,
+          timestamp: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          }),
+          date: new Date().toLocaleDateString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          }),
+        })
+        setCountdown(4)
+        setIsPaused(false)
+        toast(`Welcome back, ${resolvedName}! Hand Plate issued.`, "ok")
       } else {
-        setErr('Invalid email or password. Please verify credentials or Continue with Google.')
-        toast('Authentication failed', 'bad')
+        setErr(
+          "Invalid email or password. Please verify credentials or Continue with Google.",
+        )
+        toast("Authentication failed", "bad")
       }
     } catch (error: any) {
-      setErr(error.message || 'Login error occurred. Please try again.')
+      setErr(error.message || "Login error occurred. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -466,30 +453,31 @@ export default function Login() {
   // =========================================================================
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
-    setErr('')
+    setErr("")
 
     const name = signupName.trim()
     const emailToRegister = signupEmail.trim().toLowerCase()
 
     if (!name) {
-      setErr('Please enter your full legal name.')
+      setErr("Please enter your full legal name.")
       return
     }
 
     if (signupPassword.length < 6) {
-      setErr('Password must be at least 6 characters in length.')
+      setErr("Password must be at least 6 characters in length.")
       return
     }
 
     if (signupPassword !== signupConfirmPassword) {
-      setErr('Passwords do not match. Please re-enter confirmation password.')
+      setErr("Passwords do not match. Please re-enter confirmation password.")
       return
     }
 
     setIsLoading(true)
 
     try {
-      let supaUid = 'REG-' + Math.random().toString(36).substring(2, 9).toUpperCase()
+      let supaUid =
+        "REG-" + Math.random().toString(36).substring(2, 9).toUpperCase()
 
       // 1. Supabase Auth signup
       if (supabase) {
@@ -508,40 +496,71 @@ export default function Login() {
             supaUid = data.user.id
           }
           if (authError) {
-            console.warn('Supabase auth notice:', authError.message)
+            console.warn("Supabase auth notice:", authError.message)
           }
         } catch (supaErr) {
-          console.warn('Supabase auth exception:', supaErr)
+          console.warn("Supabase auth exception:", supaErr)
         }
       }
 
       // 2. Persist to Supabase Database table & local repository
-      await persistUserToDatabases(name, emailToRegister, signupRole, null, 'password', supaUid)
+      await persistUserToDatabases(
+        name,
+        emailToRegister,
+        signupRole,
+        null,
+        "password",
+        supaUid,
+      )
 
       // Also save the local password for future sign in
-      if (typeof window !== 'undefined') {
-        const savedUsers = JSON.parse(localStorage.getItem('mercy_registered_users') || '[]')
-        const idx = savedUsers.findIndex((u: any) => u.email.toLowerCase() === emailToRegister)
+      if (typeof window !== "undefined") {
+        const savedUsers = JSON.parse(
+          localStorage.getItem("mercy_registered_users") || "[]",
+        )
+        const idx = savedUsers.findIndex(
+          (u: any) => u.email.toLowerCase() === emailToRegister,
+        )
         if (idx >= 0) {
           savedUsers[idx].password = signupPassword
-          localStorage.setItem('mercy_registered_users', JSON.stringify(savedUsers))
+          localStorage.setItem(
+            "mercy_registered_users",
+            JSON.stringify(savedUsers),
+          )
         }
       }
 
-      // Play smooth blue takeover animation
-      await playBlueTakeover(
+      // Present result on Hand Plate
+      setHandPlate({
         name,
-        emailToRegister,
-        null,
-        signupRole,
-        'password',
-        supaUid,
-        true
-      )
+        email: emailToRegister,
+        photoURL: null,
+        role: signupRole,
+        uid: supaUid,
+        authMethod: "supabase_password",
+        supabaseSaved: true,
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }),
+        date: new Date().toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        }),
+      })
+      setCountdown(5)
+      setIsPaused(false)
 
-      toast(`Account successfully registered and reflected in Supabase! Welcome, ${name}.`, 'ok')
+      toast(
+        `Account successfully registered and reflected in Supabase! Welcome, ${name}.`,
+        "ok",
+      )
     } catch (e: any) {
-      setErr(e.message || 'Error occurred while registering account in Supabase.')
+      setErr(
+        e.message || "Error occurred while registering account in Supabase.",
+      )
     } finally {
       setIsLoading(false)
     }
@@ -553,7 +572,7 @@ export default function Login() {
     const text = `=== MERCY JUDICIAL COMMISSION HAND PLATE ===\nOFFICER: ${handPlate.name}\nEMAIL: ${handPlate.email}\nROLE: ${handPlate.role}\nUID: ${handPlate.uid}\nAUTH: ${handPlate.authMethod.toUpperCase()}\nDATABASE: REFLECTED IN SUPABASE POSTGRES\nTIMESTAMP: ${handPlate.date} ${handPlate.timestamp}`
     navigator.clipboard.writeText(text)
     setCopiedPlate(true)
-    toast('Hand Plate credentials copied to clipboard', 'ok')
+    toast("Hand Plate credentials copied to clipboard", "ok")
     setTimeout(() => setCopiedPlate(false), 2000)
   }
 
@@ -567,132 +586,11 @@ export default function Login() {
     setAuthed(false)
     setUser(null)
     setHandPlate(null)
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('mercy_authed')
-      localStorage.removeItem('mercy_user')
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("mercy_authed")
+      localStorage.removeItem("mercy_user")
     }
-    toast('Session locked. Returned to terminal login.', 'info')
-  }
-
-  // =========================================================================
-  // VIEW 0: SMOOTH BLUE TAKEOVER ANIMATION OVERLAY
-  // =========================================================================
-  if (blueTakeover && blueTakeover.active) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-hidden bg-[#020617] animate-blue-takeover select-none">
-        {/* Ambient radial deep sapphire/cobalt glow */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,#1E40AF55_0%,#0B1536C0_50%,#020617_100%)] pointer-events-none" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#3b82f615_1px,transparent_1px),linear-gradient(to_bottom,#3b82f615_1px,transparent_1px)] bg-[size:36px_36px] pointer-events-none opacity-40" />
-
-        {/* Floating smooth laser sweep scanline */}
-        <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_20px_#22d3ee] animate-laser-sweep pointer-events-none opacity-90" />
-
-        {/* Central High-Tech Judicial Pod */}
-        <div className="relative w-full max-w-lg rounded-3xl border-2 border-blue-500/30 bg-[#070F2B]/95 backdrop-blur-2xl p-7 sm:p-9 text-white shadow-[0_0_80px_rgba(37,99,235,0.4)] space-y-6">
-          {/* Corner glowing tech brackets */}
-          <div className="absolute top-3 left-3 size-3 border-t-2 border-l-2 border-cyan-400" />
-          <div className="absolute top-3 right-3 size-3 border-t-2 border-r-2 border-cyan-400" />
-          <div className="absolute bottom-3 left-3 size-3 border-b-2 border-l-2 border-cyan-400" />
-          <div className="absolute bottom-3 right-3 size-3 border-b-2 border-r-2 border-cyan-400" />
-
-          {/* Top Telemetry Header */}
-          <div className="flex items-center justify-between border-b border-blue-500/20 pb-3 text-[11px] font-mono text-cyan-300">
-            <span className="flex items-center gap-2">
-              <span className="size-2 rounded-full bg-cyan-400 animate-ping" />
-              BENCH SECURITY PROTOCOL // BLUE TAKEOVER
-            </span>
-            <span className="bg-blue-950/80 border border-blue-400/40 px-2 py-0.5 rounded text-[10px] text-cyan-200">
-              SYS-AUTH 200 OK
-            </span>
-          </div>
-
-          {/* Central Rotating Emblem & Scanning Field */}
-          <div className="relative py-4 flex flex-col items-center justify-center">
-            {/* Concentric Cyan & Sapphire Pulsing Rings */}
-            <div className="absolute size-36 sm:size-42 rounded-full border border-cyan-500/20 animate-blue-pulse pointer-events-none" />
-            <div className="absolute size-48 sm:size-54 rounded-full border border-dashed border-blue-400/30 animate-scan-rotate pointer-events-none" />
-
-            {/* Core Avatar / Emblem */}
-            <div className="relative size-20 sm:size-22 rounded-2xl bg-gradient-to-tr from-blue-700 via-blue-500 to-cyan-400 p-0.5 shadow-[0_0_35px_rgba(59,130,246,0.7)]">
-              <div className="size-full rounded-[14px] bg-[#070E24] flex items-center justify-center overflow-hidden">
-                {blueTakeover.photoURL ? (
-                  <img src={blueTakeover.photoURL} alt={blueTakeover.officerName} className="size-full object-cover" />
-                ) : blueTakeover.provider === 'google' ? (
-                  <GoogleIcon className="size-10" />
-                ) : (
-                  <Scale className="size-9 text-cyan-400 animate-pulse" />
-                )}
-              </div>
-            </div>
-
-            <div className="mt-4 text-center space-y-1">
-              <div className="inline-block px-3 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-cyan-300 font-mono text-[10.5px] uppercase font-bold tracking-wider">
-                {blueTakeover.title}
-              </div>
-              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                {blueTakeover.officerName}
-              </h2>
-              <p className="text-xs text-blue-200/80 font-mono">
-                {blueTakeover.subtitle}
-              </p>
-            </div>
-          </div>
-
-          {/* Real-time Verification Checklist */}
-          <div className="space-y-2 font-mono text-xs bg-black/50 p-4 rounded-2xl border border-blue-500/20">
-            <div className="flex items-center justify-between text-blue-200">
-              <span className="flex items-center gap-2">
-                {blueTakeover.stage >= 1 ? (
-                  <CheckCircle2 className="size-3.5 text-cyan-400" />
-                ) : (
-                  <RefreshCw className="size-3.5 animate-spin text-blue-400" />
-                )}
-                [01] OAuth2 Security Handshake
-              </span>
-              <span className="text-cyan-400 font-bold">{blueTakeover.stage >= 1 ? 'VERIFIED' : 'SYNCING'}</span>
-            </div>
-
-            <div className="flex items-center justify-between text-blue-200">
-              <span className="flex items-center gap-2">
-                {blueTakeover.stage >= 2 ? (
-                  <CheckCircle2 className="size-3.5 text-cyan-400" />
-                ) : (
-                  <RefreshCw className="size-3.5 animate-spin text-blue-400" />
-                )}
-                [02] Supabase Postgres Relational Vault
-              </span>
-              <span className="text-cyan-400 font-bold">{blueTakeover.stage >= 2 ? 'REFLECTED' : 'PENDING'}</span>
-            </div>
-
-            <div className="flex items-center justify-between text-blue-200">
-              <span className="flex items-center gap-2">
-                {blueTakeover.stage >= 3 ? (
-                  <CheckCircle2 className="size-3.5 text-cyan-400" />
-                ) : (
-                  <RefreshCw className="size-3.5 animate-spin text-blue-400" />
-                )}
-                [03] Commissioning Bench Hand Plate
-              </span>
-              <span className="text-cyan-400 font-bold">{blueTakeover.stage >= 3 ? 'ISSUED' : 'ENGRAVING'}</span>
-            </div>
-          </div>
-
-          {/* Glowing Animated Progress Bar */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-[11px] font-mono text-cyan-300">
-              <span>AUTHENTICATION PROGRESS</span>
-              <span>{blueTakeover.progress}%</span>
-            </div>
-            <div className="h-2 w-full rounded-full bg-blue-950/80 border border-blue-800 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400 transition-all duration-300 ease-out shadow-[0_0_12px_#22d3ee]"
-                style={{ width: `${blueTakeover.progress}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+    toast("Session locked. Returned to terminal login.", "info")
   }
 
   // =========================================================================
@@ -712,7 +610,9 @@ export default function Login() {
           <div className="flex items-center justify-between px-3 text-xs font-mono font-bold text-zinc-600">
             <div className="flex items-center gap-2">
               <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>JUDICIAL IDENTITY VERIFIED · RESULT ISSUED ON-HAND PLATE</span>
+              <span>
+                JUDICIAL IDENTITY VERIFIED · RESULT ISSUED ON-HAND PLATE
+              </span>
             </div>
             <span className="text-[11px] bg-black text-white px-2.5 py-0.5 rounded-full">
               SEC-LVL 4
@@ -779,7 +679,7 @@ export default function Login() {
                     {handPlate.name.slice(0, 2).toUpperCase()}
                   </div>
                 )}
-                {handPlate.authMethod === 'google' && (
+                {handPlate.authMethod === "google" && (
                   <div className="absolute -bottom-1.5 -right-1.5 p-1 rounded-full bg-white shadow-md">
                     <GoogleIcon className="size-4" />
                   </div>
@@ -808,7 +708,9 @@ export default function Login() {
                   </span>
                   <span className="bg-emerald-950/60 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded flex items-center gap-1">
                     <CheckCircle2 className="size-2.5" />
-                    {handPlate.authMethod === 'google' ? 'Google OAuth2 Active' : 'Supabase Password Verified'}
+                    {handPlate.authMethod === "google"
+                      ? "Google OAuth2 Active"
+                      : "Supabase Password Verified"}
                   </span>
                 </div>
               </div>
@@ -830,7 +732,8 @@ export default function Login() {
                   <span>Saved in Postgres 'profiles'</span>
                 </div>
                 <p className="text-[10.5px] text-zinc-400 font-sans">
-                  Active record reflected in cloud relational schema and local session registry.
+                  Active record reflected in cloud relational schema and local
+                  session registry.
                 </p>
               </div>
 
@@ -846,11 +749,14 @@ export default function Login() {
                 <div className="text-white font-bold text-xs flex items-center gap-1.5">
                   <CheckCircle2 className="size-3.5 text-amber-400 shrink-0" />
                   <span>
-                    {handPlate.authMethod === 'google' ? 'Firebase Google OAuth2' : 'Encrypted Password Vault'}
+                    {handPlate.authMethod === "google"
+                      ? "Firebase Google OAuth2"
+                      : "Encrypted Password Vault"}
                   </span>
                 </div>
                 <p className="text-[10.5px] text-zinc-400 font-sans">
-                  Official bench session token issued with read/write dockets jurisdiction.
+                  Official bench session token issued with read/write dockets
+                  jurisdiction.
                 </p>
               </div>
             </div>
@@ -870,7 +776,7 @@ export default function Login() {
                 <div className="flex items-center justify-between text-xs font-mono">
                   <span className="text-zinc-400">
                     {isPaused
-                      ? 'Auto-advance paused'
+                      ? "Auto-advance paused"
                       : `Proceeding to Dashboard in ${countdown}s...`}
                   </span>
                   <button
@@ -878,7 +784,7 @@ export default function Login() {
                     onClick={() => setIsPaused(!isPaused)}
                     className="text-amber-300 hover:text-amber-200 underline text-[11px] cursor-pointer"
                   >
-                    {isPaused ? 'Resume Timer' : 'Pause on Hand Plate'}
+                    {isPaused ? "Resume Timer" : "Pause on Hand Plate"}
                   </button>
                 </div>
 
@@ -896,7 +802,7 @@ export default function Login() {
               <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => nav('/', { replace: true })}
+                  onClick={() => nav("/", { replace: true })}
                   className="w-full sm:flex-1 py-3.5 px-5 rounded-2xl bg-[#FAF8F2] hover:bg-white text-black font-sans font-black text-sm shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]"
                 >
                   <span>Enter Judicial Bench Dashboard</span>
@@ -905,32 +811,16 @@ export default function Login() {
 
                 <button
                   type="button"
-                  onClick={() =>
-                    playBlueTakeover(
-                      handPlate.name,
-                      handPlate.email,
-                      handPlate.photoURL,
-                      handPlate.role,
-                      handPlate.authMethod,
-                      handPlate.uid,
-                      handPlate.supabaseSaved
-                    )
-                  }
-                  className="w-full sm:w-auto py-3.5 px-3.5 rounded-2xl bg-blue-500/20 hover:bg-blue-500/30 text-cyan-300 font-mono text-xs font-bold border border-blue-400/30 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                  title="Replay Blue Security Takeover Animation"
-                >
-                  <Sparkles className="size-3.5 text-cyan-400" />
-                  <span>Blue Takeover</span>
-                </button>
-
-                <button
-                  type="button"
                   onClick={copyHandPlate}
                   className="w-full sm:w-auto py-3.5 px-4 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-mono text-xs font-bold border border-white/10 transition-colors cursor-pointer flex items-center justify-center gap-2"
                   title="Copy Hand Plate Summary"
                 >
-                  {copiedPlate ? <Check className="size-4 text-emerald-400" /> : <Copy className="size-4" />}
-                  <span>{copiedPlate ? 'Copied!' : 'Copy'}</span>
+                  {copiedPlate ? (
+                    <Check className="size-4 text-emerald-400" />
+                  ) : (
+                    <Copy className="size-4" />
+                  )}
+                  <span>{copiedPlate ? "Copied!" : "Copy Plate"}</span>
                 </button>
 
                 <button
@@ -988,13 +878,13 @@ export default function Login() {
           <button
             type="button"
             onClick={() => {
-              setMode('signin')
-              setErr('')
+              setMode("signin")
+              setErr("")
             }}
             className={`py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
-              mode === 'signin'
-                ? 'bg-black text-white shadow-sm'
-                : 'text-zinc-600 hover:text-black'
+              mode === "signin"
+                ? "bg-black text-white shadow-sm"
+                : "text-zinc-600 hover:text-black"
             }`}
           >
             <LogIn className="size-3.5" />
@@ -1004,13 +894,13 @@ export default function Login() {
           <button
             type="button"
             onClick={() => {
-              setMode('signup')
-              setErr('')
+              setMode("signup")
+              setErr("")
             }}
             className={`py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
-              mode === 'signup'
-                ? 'bg-black text-white shadow-sm'
-                : 'text-zinc-600 hover:text-black'
+              mode === "signup"
+                ? "bg-black text-white shadow-sm"
+                : "text-zinc-600 hover:text-black"
             }`}
           >
             <UserPlus className="size-3.5" />
@@ -1029,13 +919,13 @@ export default function Login() {
         {/* ===================================================================== */}
         {/* MODE 1: NORMAL SIGN IN FORM                                           */}
         {/* ===================================================================== */}
-        {mode === 'signin' && (
+        {mode === "signin" && (
           <form onSubmit={handlePasswordLogin} className="space-y-4">
             {/* CONTINUE WITH GOOGLE BUTTON (SIGN IN) */}
             <button
               type="button"
               disabled={isGoogleLoading || isLoading}
-              onClick={() => handleGoogleAuth('signin')}
+              onClick={() => handleGoogleAuth("signin")}
               className="w-full h-12 px-4 rounded-2xl border-2 border-black/15 hover:border-black bg-white hover:bg-zinc-50 text-zinc-900 font-sans font-bold text-xs sm:text-sm shadow-xs hover:shadow-md transition-all cursor-pointer flex items-center justify-center gap-3 disabled:opacity-60 active:scale-[0.99]"
             >
               {isGoogleLoading ? (
@@ -1043,7 +933,11 @@ export default function Login() {
               ) : (
                 <GoogleIcon className="size-4" />
               )}
-              <span>{isGoogleLoading ? 'Connecting to Google...' : 'Continue with Google'}</span>
+              <span>
+                {isGoogleLoading
+                  ? "Connecting to Google..."
+                  : "Continue with Google"}
+              </span>
             </button>
 
             {/* Divider */}
@@ -1052,7 +946,9 @@ export default function Login() {
                 <div className="w-full border-t border-zinc-200" />
               </div>
               <div className="relative flex justify-center text-[11px] font-mono uppercase">
-                <span className="bg-white px-3 text-zinc-400 font-bold">or sign in with password</span>
+                <span className="bg-white px-3 text-zinc-400 font-bold">
+                  or sign in with password
+                </span>
               </div>
             </div>
 
@@ -1082,7 +978,7 @@ export default function Login() {
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-zinc-400" />
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
@@ -1093,9 +989,13 @@ export default function Login() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 cursor-pointer"
-                  title={showPassword ? 'Hide password' : 'Show password'}
+                  title={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  {showPassword ? (
+                    <EyeOff className="size-4" />
+                  ) : (
+                    <Eye className="size-4" />
+                  )}
                 </button>
               </div>
             </div>
@@ -1109,9 +1009,13 @@ export default function Login() {
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="size-4 rounded border-black/20 text-black focus:ring-black accent-black"
                 />
-                <span className="text-zinc-600 font-medium text-[11.5px]">Remember this device</span>
+                <span className="text-zinc-600 font-medium text-[11.5px]">
+                  Remember this device
+                </span>
               </label>
-              <span className="text-zinc-400 text-[11px] font-mono">Bench Security</span>
+              <span className="text-zinc-400 text-[11px] font-mono">
+                Bench Security
+              </span>
             </div>
 
             {/* Sign In Button */}
@@ -1120,19 +1024,21 @@ export default function Login() {
               disabled={isLoading || isGoogleLoading}
               className="w-full py-3.5 px-5 rounded-2xl bg-[#121316] hover:bg-zinc-800 text-white font-sans font-bold text-sm shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60 active:scale-[0.99]"
             >
-              <span>{isLoading ? 'Authenticating...' : 'Sign In to Mercy'}</span>
+              <span>
+                {isLoading ? "Authenticating..." : "Sign In to Mercy"}
+              </span>
               <ArrowRight className="size-4" />
             </button>
 
             {/* Switch to Sign Up */}
             <div className="text-center pt-2">
               <p className="text-xs text-zinc-500">
-                Don't have an account yet?{' '}
+                Don't have an account yet?{" "}
                 <button
                   type="button"
                   onClick={() => {
-                    setMode('signup')
-                    setErr('')
+                    setMode("signup")
+                    setErr("")
                   }}
                   className="font-bold text-black hover:underline cursor-pointer"
                 >
@@ -1146,13 +1052,13 @@ export default function Login() {
         {/* ===================================================================== */}
         {/* MODE 2: SIGN UP / ADD NEW USER FORM (SAVES TO SUPABASE)               */}
         {/* ===================================================================== */}
-        {mode === 'signup' && (
+        {mode === "signup" && (
           <form onSubmit={handleSignUp} className="space-y-4">
             {/* CONTINUE WITH GOOGLE BUTTON (SIGN UP) */}
             <button
               type="button"
               disabled={isGoogleLoading || isLoading}
-              onClick={() => handleGoogleAuth('signup')}
+              onClick={() => handleGoogleAuth("signup")}
               className="w-full h-12 px-4 rounded-2xl border-2 border-black/15 hover:border-black bg-white hover:bg-zinc-50 text-zinc-900 font-sans font-bold text-xs sm:text-sm shadow-xs hover:shadow-md transition-all cursor-pointer flex items-center justify-center gap-3 disabled:opacity-60 active:scale-[0.99]"
             >
               {isGoogleLoading ? (
@@ -1162,7 +1068,7 @@ export default function Login() {
               )}
               <span>
                 {isGoogleLoading
-                  ? 'Connecting to Google...'
+                  ? "Connecting to Google..."
                   : `Continue with Google (Register as ${signupRole})`}
               </span>
             </button>
@@ -1189,7 +1095,9 @@ export default function Login() {
                 <div className="w-full border-t border-zinc-200" />
               </div>
               <div className="relative flex justify-center text-[11px] font-mono uppercase">
-                <span className="bg-white px-3 text-zinc-400 font-bold">or register with email password</span>
+                <span className="bg-white px-3 text-zinc-400 font-bold">
+                  or register with email password
+                </span>
               </div>
             </div>
 
@@ -1237,7 +1145,7 @@ export default function Login() {
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-zinc-400" />
                 <input
-                  type={showSignupPassword ? 'text' : 'password'}
+                  type={showSignupPassword ? "text" : "password"}
                   value={signupPassword}
                   onChange={(e) => setSignupPassword(e.target.value)}
                   placeholder="Create a strong password"
@@ -1249,7 +1157,11 @@ export default function Login() {
                   onClick={() => setShowSignupPassword(!showSignupPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 cursor-pointer"
                 >
-                  {showSignupPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  {showSignupPassword ? (
+                    <EyeOff className="size-4" />
+                  ) : (
+                    <Eye className="size-4" />
+                  )}
                 </button>
               </div>
             </div>
@@ -1279,18 +1191,22 @@ export default function Login() {
               className="w-full py-3.5 px-5 rounded-2xl bg-black hover:bg-zinc-800 text-white font-sans font-bold text-sm shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60 active:scale-[0.99]"
             >
               <UserPlus className="size-4 text-[#FF5C5C]" />
-              <span>{isLoading ? 'Saving to Supabase Database...' : 'Sign Up & Save to Supabase'}</span>
+              <span>
+                {isLoading
+                  ? "Saving to Supabase Database..."
+                  : "Sign Up & Save to Supabase"}
+              </span>
             </button>
 
             {/* Switch to Sign In */}
             <div className="text-center pt-2">
               <p className="text-xs text-zinc-500">
-                Already have an account?{' '}
+                Already have an account?{" "}
                 <button
                   type="button"
                   onClick={() => {
-                    setMode('signin')
-                    setErr('')
+                    setMode("signin")
+                    setErr("")
                   }}
                   className="font-bold text-black hover:underline cursor-pointer"
                 >
@@ -1309,5 +1225,3 @@ export default function Login() {
     </div>
   )
 }
-
-

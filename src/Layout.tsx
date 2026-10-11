@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { NavLink, Navigate, Outlet, useNavigate } from 'react-router'
+import { useEffect, useRef, useState } from "react"
+import { NavLink, Navigate, Outlet, useNavigate } from "react-router"
 import {
   Bell,
   BookOpenText,
@@ -20,6 +20,7 @@ import {
   Clock,
   Cloud,
   FileText,
+  FileCheck,
   Plus,
   Shield,
   Sun,
@@ -31,41 +32,46 @@ import {
   PanelLeftOpen,
   ChevronLeft,
   ChevronRight,
-} from 'lucide-react'
-import { judicialStore } from './lib/judicialStore'
-import { isSupabaseConfigured } from './lib/supabase'
-import { cn, useApp, Button } from './ui'
+} from "lucide-react"
+import { judicialStore } from "./lib/judicialStore"
+import { isSupabaseConfigured } from "./lib/supabase"
+import { cn, useApp, Button } from "./ui"
 
 const navGeneral = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/schedule', label: 'Schedule', icon: History },
-  { to: '/cases', label: 'Case Files', icon: Briefcase },
-  { to: '/criminals', label: 'Criminals', icon: Users2 },
-  { to: '/lawyers', label: 'Lawyers', icon: Scale },
+  { to: "/", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/schedule", label: "Schedule", icon: History },
+  { to: "/cases", label: "Case Files", icon: Briefcase },
+  { to: "/criminals", label: "Criminals", icon: Users2 },
+  { to: "/lawyers", label: "Lawyers", icon: Scale },
 ]
 
 const navTools = [
-  { to: '/research', label: 'AI Precedents', icon: Sparkles },
-  { to: '/law-reference', label: 'Law Reference', icon: BookOpenText },
-  { to: '/judgments', label: 'Judgments', icon: Gavel },
-  { to: '/documents', label: 'Documents', icon: FileText },
-  { to: '/cases/new', label: 'Intake Case', icon: Plus },
-  { to: '/settings', label: 'Settings', icon: Settings },
+  { to: "/research", label: "AI Precedents", icon: Sparkles },
+  { to: "/law-reference", label: "Law Reference", icon: BookOpenText },
+  { to: "/judgments", label: "Judgments", icon: Gavel },
+  { to: "/documents", label: "Documents", icon: FileText },
+  {
+    to: "/cases/final-judgment",
+    label: "Final Judgment Case",
+    icon: FileCheck,
+  },
+  { to: "/settings", label: "Settings", icon: Settings },
 ]
 
 function useOutside(close: () => void) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    const h = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && close()
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
+    const h = (e: MouseEvent) =>
+      ref.current && !ref.current.contains(e.target as Node) && close()
+    document.addEventListener("mousedown", h)
+    return () => document.removeEventListener("mousedown", h)
   }, [close])
   return ref
 }
 
 function GlobalSearch() {
-  const [q, setQ] = useState('')
-  const [filterType, setFilterType] = useState('All')
+  const [q, setQ] = useState("")
+  const [filterType, setFilterType] = useState("All")
   const [open, setOpen] = useState(false)
   const navTo = useNavigate()
   const ref = useOutside(() => setOpen(false))
@@ -77,9 +83,11 @@ function GlobalSearch() {
     : []
 
   const matchedCases = q.trim()
-    ? cases.filter((c) =>
-        (c.number + ' ' + c.title).toLowerCase().includes(q.toLowerCase())
-      ).slice(0, 4)
+    ? cases
+        .filter((c) =>
+          (c.number + " " + c.title).toLowerCase().includes(q.toLowerCase()),
+        )
+        .slice(0, 4)
     : []
 
   return (
@@ -100,13 +108,15 @@ function GlobalSearch() {
         {/* Category Pills (Like in Image 2 header) */}
         <div className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-zinc-400 shrink-0 border-l border-zinc-200 pl-3">
           <span className="text-[11px] text-zinc-400 font-bold">In:</span>
-          {['Criminals', 'Cases', 'Law'].map((cat) => (
+          {["Criminals", "Cases", "Law"].map((cat) => (
             <button
               key={cat}
               type="button"
               onClick={() => setFilterType(cat)}
               className={`px-3 py-1 rounded-full text-xs transition-colors cursor-pointer ${
-                filterType === cat ? 'bg-zinc-900 text-white font-bold shadow-xs' : 'hover:bg-zinc-100 text-zinc-600'
+                filterType === cat
+                  ? "bg-zinc-900 text-white font-bold shadow-xs"
+                  : "hover:bg-zinc-100 text-zinc-600"
               }`}
             >
               {cat}
@@ -135,7 +145,7 @@ function GlobalSearch() {
                   onClick={() => {
                     navTo(`/criminals/${crm.id}`)
                     setOpen(false)
-                    setQ('')
+                    setQ("")
                   }}
                 >
                   <div className="flex items-center gap-2.5">
@@ -143,8 +153,12 @@ function GlobalSearch() {
                       {crm.photoPlaceholder}
                     </div>
                     <div>
-                      <div className="font-bold text-xs text-zinc-900">{crm.name}</div>
-                      <div className="text-[11px] text-zinc-500">{crm.crimId} · {crm.custodyStatus}</div>
+                      <div className="font-bold text-xs text-zinc-900">
+                        {crm.name}
+                      </div>
+                      <div className="text-[11px] text-zinc-500">
+                        {crm.crimId} · {crm.custodyStatus}
+                      </div>
                     </div>
                   </div>
                   <span className="text-[11px] px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-700 font-semibold">
@@ -167,12 +181,16 @@ function GlobalSearch() {
                   onClick={() => {
                     navTo(`/cases/${c.id}`)
                     setOpen(false)
-                    setQ('')
+                    setQ("")
                   }}
                 >
                   <div>
-                    <div className="font-bold text-xs text-[#FF5C5C]">{c.number}</div>
-                    <div className="text-[11px] text-zinc-700 truncate max-w-xs">{c.title}</div>
+                    <div className="font-bold text-xs text-[#FF5C5C]">
+                      {c.number}
+                    </div>
+                    <div className="text-[11px] text-zinc-700 truncate max-w-xs">
+                      {c.title}
+                    </div>
                   </div>
                   <span className="text-[10.5px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold">
                     {c.stage}
@@ -220,30 +238,39 @@ function AlarmsDrawer({
 
       <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
         {alarms.map((a) => (
-          <div key={a.id} className="p-3.5 rounded-2xl border border-black/5 bg-zinc-50/80 space-y-1.5">
+          <div
+            key={a.id}
+            className="p-3.5 rounded-2xl border border-black/5 bg-zinc-50/80 space-y-1.5"
+          >
             <div className="flex items-center justify-between">
               <span
                 className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  a.urgency === 'STATUTORY_CRITICAL'
-                    ? 'bg-rose-100 text-rose-700'
-                    : 'bg-amber-100 text-amber-700'
+                  a.urgency === "STATUTORY_CRITICAL"
+                    ? "bg-rose-100 text-rose-700"
+                    : "bg-amber-100 text-amber-700"
                 }`}
               >
-                {a.urgency.replace(/_/g, ' ')}
+                {a.urgency.replace(/_/g, " ")}
               </span>
-              <span className="text-[10.5px] text-zinc-400 font-mono">{a.triggerTime}</span>
+              <span className="text-[10.5px] text-zinc-400 font-mono">
+                {a.triggerTime}
+              </span>
             </div>
             <div className="font-bold text-xs text-foreground">{a.title}</div>
-            <p className="text-[11px] text-zinc-600 leading-relaxed">{a.message}</p>
+            <p className="text-[11px] text-zinc-600 leading-relaxed">
+              {a.message}
+            </p>
             <div className="pt-1 flex items-center justify-between">
               {a.caseNumber && (
-                <span className="text-[11px] text-[#FF5C5C] font-semibold">{a.caseNumber}</span>
+                <span className="text-[11px] text-[#FF5C5C] font-semibold">
+                  {a.caseNumber}
+                </span>
               )}
               {!a.isAcknowledged && (
                 <button
                   onClick={() => {
                     judicialStore.acknowledgeAlarm(a.id)
-                    toast('Alarm acknowledged', 'info')
+                    toast("Alarm acknowledged", "info")
                   }}
                   className="text-[10.5px] px-2.5 py-1 rounded-full bg-white border border-black/10 hover:bg-zinc-100 font-medium cursor-pointer"
                 >
@@ -259,12 +286,21 @@ function AlarmsDrawer({
 }
 
 export default function Layout() {
-  const { authed, setAuthed, user, logout, isAuthReady, role, theme, setTheme } = useApp()
+  const {
+    authed,
+    setAuthed,
+    user,
+    logout,
+    isAuthReady,
+    role,
+    theme,
+    setTheme,
+  } = useApp()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [alarmsOpen, setAlarmsOpen] = useState(false)
   const [sidebarHidden, setSidebarHidden] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('mercy_sidebar_hidden') === 'true'
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("mercy_sidebar_hidden") === "true"
     }
     return false
   })
@@ -273,8 +309,8 @@ export default function Layout() {
   const toggleSidebar = () => {
     setSidebarHidden((prev) => {
       const next = !prev
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('mercy_sidebar_hidden', String(next))
+      if (typeof window !== "undefined") {
+        localStorage.setItem("mercy_sidebar_hidden", String(next))
       }
       return next
     })
@@ -283,13 +319,13 @@ export default function Layout() {
   // Keyboard shortcut Ctrl+B or Cmd+B to toggle sidebar
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
         e.preventDefault()
         toggleSidebar()
       }
     }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
   }, [])
 
   useEffect(() => {
@@ -325,10 +361,10 @@ export default function Layout() {
       <aside
         className={`bg-[#121316] text-white rounded-[28px] shrink-0 flex flex-col justify-between shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] select-none z-40 ${
           mobileMenuOpen
-            ? 'fixed inset-y-3 left-3 z-50 w-64 p-4.5 translate-x-0 opacity-100'
+            ? "fixed inset-y-3 left-3 z-50 w-64 p-4.5 translate-x-0 opacity-100"
             : sidebarHidden
-            ? 'w-0 opacity-0 -translate-x-12 p-0 m-0 pointer-events-none overflow-hidden border-0'
-            : 'hidden md:flex w-60 opacity-100 translate-x-0 p-4.5 overflow-hidden'
+              ? "w-0 opacity-0 -translate-x-12 p-0 m-0 pointer-events-none overflow-hidden border-0"
+              : "hidden md:flex w-60 opacity-100 translate-x-0 p-4.5 overflow-hidden"
         }`}
       >
         <div className="space-y-6">
@@ -357,13 +393,13 @@ export default function Layout() {
               <NavLink
                 key={item.to}
                 to={item.to}
-                end={item.to === '/'}
+                end={item.to === "/"}
                 onClick={() => setMobileMenuOpen(false)}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all ${
                     isActive
-                      ? 'bg-[#222328] text-white shadow-xs font-bold'
-                      : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+                      ? "bg-[#222328] text-white shadow-xs font-bold"
+                      : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
                   }`
                 }
               >
@@ -386,8 +422,8 @@ export default function Layout() {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all ${
                     isActive
-                      ? 'bg-[#222328] text-white shadow-xs font-bold'
-                      : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+                      ? "bg-[#222328] text-white shadow-xs font-bold"
+                      : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
                   }`
                 }
               >
@@ -409,15 +445,15 @@ export default function Layout() {
               />
             ) : (
               <div className="size-8 rounded-full bg-[#FF5C5C] text-white font-bold text-xs grid place-items-center shrink-0">
-                {user?.name ? user.name.slice(0, 2).toUpperCase() : 'ME'}
+                {user?.name ? user.name.slice(0, 2).toUpperCase() : "ME"}
               </div>
             )}
             <div className="overflow-hidden">
               <div className="text-xs font-bold text-white truncate">
-                {user?.name || 'Hon. Judge'}
+                {user?.name || "Hon. Judge"}
               </div>
               <div className="text-[10px] text-zinc-400 truncate">
-                {user?.email || 'Bench 04 · Sessions'}
+                {user?.email || "Bench 04 · Sessions"}
               </div>
             </div>
           </div>
@@ -439,13 +475,21 @@ export default function Layout() {
           onClick={toggleSidebar}
           className={`group relative flex flex-col items-center justify-center py-4 px-1.5 rounded-full border-2 border-black transition-all cursor-pointer shadow-[2px_2px_0px_#000] hover:shadow-[3px_3px_0px_#FF5C5C] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none ${
             sidebarHidden
-              ? 'bg-black text-white hover:bg-zinc-900 ring-2 ring-black/20'
-              : 'bg-[#FAF8F2] text-black hover:bg-white'
+              ? "bg-black text-white hover:bg-zinc-900 ring-2 ring-black/20"
+              : "bg-[#FAF8F2] text-black hover:bg-white"
           }`}
-          title={sidebarHidden ? "Expand Terminal Sidebar (Ctrl+B)" : "Hide Terminal Sidebar (Ctrl+B)"}
+          title={
+            sidebarHidden
+              ? "Expand Terminal Sidebar (Ctrl+B)"
+              : "Hide Terminal Sidebar (Ctrl+B)"
+          }
         >
           <div className="flex flex-col items-center gap-1.5 text-[9px] font-mono font-black">
-            <span className={`size-1.5 rounded-full ${sidebarHidden ? 'bg-[#FF5C5C] animate-pulse' : 'bg-emerald-500'}`} />
+            <span
+              className={`size-1.5 rounded-full ${
+                sidebarHidden ? "bg-[#FF5C5C] animate-pulse" : "bg-emerald-500"
+              }`}
+            />
             {sidebarHidden ? (
               <ChevronRight className="size-3 text-[#FF5C5C] group-hover:scale-125 transition-transform" />
             ) : (
@@ -475,12 +519,22 @@ export default function Layout() {
               onClick={toggleSidebar}
               className={`hidden md:inline-flex items-center gap-2.5 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl border-2 border-black font-mono font-black text-xs transition-all cursor-pointer shadow-[3px_3px_0px_#121316] hover:shadow-[4px_4px_0px_#FF5C5C] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none shrink-0 ${
                 sidebarHidden
-                  ? 'bg-black text-white hover:bg-zinc-900 ring-1 ring-black'
-                  : 'bg-[#FAF8F2] text-black hover:bg-white'
+                  ? "bg-black text-white hover:bg-zinc-900 ring-1 ring-black"
+                  : "bg-[#FAF8F2] text-black hover:bg-white"
               }`}
-              title={sidebarHidden ? 'Expand Terminal Sidebar (Ctrl+B)' : 'Collapse Terminal Sidebar (Ctrl+B)'}
+              title={
+                sidebarHidden
+                  ? "Expand Terminal Sidebar (Ctrl+B)"
+                  : "Collapse Terminal Sidebar (Ctrl+B)"
+              }
             >
-              <span className={`size-2 rounded-full ${sidebarHidden ? 'bg-[#FF5C5C] animate-pulse' : 'bg-emerald-500'}`} />
+              <span
+                className={`size-2 rounded-full ${
+                  sidebarHidden
+                    ? "bg-[#FF5C5C] animate-pulse"
+                    : "bg-emerald-500"
+                }`}
+              />
               {sidebarHidden ? (
                 <>
                   <PanelLeftOpen className="size-4 text-[#FF5C5C]" />
@@ -495,7 +549,11 @@ export default function Layout() {
             </button>
 
             {/* Brand Logo when sidebar is hidden on desktop, or always on mobile */}
-            <div className={`items-center gap-2 ${sidebarHidden ? 'flex' : 'flex md:hidden'}`}>
+            <div
+              className={`items-center gap-2 ${
+                sidebarHidden ? "flex" : "flex md:hidden"
+              }`}
+            >
               <NavLink to="/" className="flex items-center gap-2">
                 <span className="font-black text-xl tracking-tight text-foreground font-sans">
                   Mercy
@@ -517,18 +575,22 @@ export default function Layout() {
               to="/settings"
               className={`hidden lg:flex items-center gap-2.5 px-4.5 py-2.5 rounded-full bg-white border text-xs sm:text-sm font-bold shadow-sm hover:border-black/25 transition-all ${
                 isSupabaseConfigured()
-                  ? 'border-black/10 text-emerald-800'
-                  : 'border-amber-300 text-amber-900 bg-amber-50/50'
+                  ? "border-black/10 text-emerald-800"
+                  : "border-amber-300 text-amber-900 bg-amber-50/50"
               }`}
             >
               <span
                 className={`size-2.5 rounded-full ${
                   isSupabaseConfigured()
-                    ? 'bg-emerald-500 animate-pulse'
-                    : 'bg-amber-500'
+                    ? "bg-emerald-500 animate-pulse"
+                    : "bg-amber-500"
                 }`}
               />
-              <span>{isSupabaseConfigured() ? 'Supabase: Connected' : 'DB: Setup API Key'}</span>
+              <span>
+                {isSupabaseConfigured()
+                  ? "Supabase: Connected"
+                  : "DB: Setup API Key"}
+              </span>
             </NavLink>
 
             {/* Notification Bell with Badge (Bigger) */}
@@ -543,16 +605,23 @@ export default function Layout() {
                   <span className="absolute top-0.5 right-0.5 size-3 rounded-full bg-[#FF5C5C] ring-2 ring-white" />
                 )}
               </button>
-              <AlarmsDrawer open={alarmsOpen} onClose={() => setAlarmsOpen(false)} />
+              <AlarmsDrawer
+                open={alarmsOpen}
+                onClose={() => setAlarmsOpen(false)}
+              />
             </div>
 
             {/* Theme Toggle (Bigger) */}
             <button
-              onClick={() => setTheme(theme === 'swiss-light' ? 'tactical-dark' : 'swiss-light')}
+              onClick={() =>
+                setTheme(
+                  theme === "swiss-light" ? "tactical-dark" : "swiss-light",
+                )
+              }
               className="grid size-12 sm:size-12.5 place-items-center rounded-full bg-white border border-black/10 text-zinc-800 hover:bg-zinc-50 shadow-sm hover:border-black/25 transition-all cursor-pointer"
               title="Toggle theme"
             >
-              {theme === 'swiss-light' ? (
+              {theme === "swiss-light" ? (
                 <Moon className="size-5.5 text-zinc-700" />
               ) : (
                 <Sun className="size-5.5 text-amber-500" />
@@ -564,7 +633,11 @@ export default function Layout() {
               <NavLink
                 to="/settings"
                 className="flex items-center gap-3 pl-2 sm:pl-2.5 pr-3.5 sm:pr-4 py-1.5 sm:py-2 rounded-full bg-white border border-black/10 shadow-sm hover:border-black/25 transition-all cursor-pointer"
-                title={user?.email ? `${user.name} (${user.email})` : 'Settings & Profile'}
+                title={
+                  user?.email
+                    ? `${user.name} (${user.email})`
+                    : "Settings & Profile"
+                }
               >
                 {user?.photoURL ? (
                   <img
@@ -574,15 +647,15 @@ export default function Layout() {
                   />
                 ) : (
                   <div className="size-8 sm:size-9 rounded-full bg-zinc-950 text-white font-black text-xs sm:text-sm grid place-items-center shadow-xs">
-                    {user?.name ? user.name.slice(0, 2).toUpperCase() : 'VR'}
+                    {user?.name ? user.name.slice(0, 2).toUpperCase() : "VR"}
                   </div>
                 )}
                 <div className="hidden sm:block text-left">
                   <span className="text-xs sm:text-sm font-black text-zinc-900 block leading-tight truncate max-w-[120px]">
-                    {user?.name || 'Judge'}
+                    {user?.name || "Judge"}
                   </span>
                   <span className="text-[10px] text-zinc-400 font-medium block truncate max-w-[120px]">
-                    {user?.email || 'Sessions Court'}
+                    {user?.email || "Sessions Court"}
                   </span>
                 </div>
               </NavLink>
@@ -591,7 +664,7 @@ export default function Layout() {
                 type="button"
                 onClick={() => {
                   logout()
-                  window.location.href = '/login'
+                  window.location.href = "/login"
                 }}
                 className="grid size-10 sm:size-11 place-items-center rounded-full bg-white border border-black/10 text-zinc-500 hover:text-rose-600 hover:bg-rose-50 shadow-sm hover:border-rose-200 transition-all cursor-pointer"
                 title="Sign out of Bench Terminal"
