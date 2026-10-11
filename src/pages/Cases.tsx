@@ -43,6 +43,7 @@ import {
   useApp,
 } from '../ui'
 import OfficialCaseDocument from '../components/OfficialCaseDocument'
+import ComprehensiveCaseIntakeModal from '../components/ComprehensiveCaseIntakeModal'
 
 export default function Cases() {
   const { toast } = useApp()
@@ -1006,98 +1007,13 @@ export default function Cases() {
       {/* ========================================================================= */}
       {/* MODAL: INTAKE NEW CASE                                                    */}
       {/* ========================================================================= */}
-      {isAddCaseOpen && (
-        <Modal
-          open={isAddCaseOpen}
-          onClose={() => setIsAddCaseOpen(false)}
-          title="Intake New Judicial Docket"
-          size="lg"
-        >
-          <form onSubmit={handleAddCaseSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Case Classification">
-                <Select
-                  value={newCaseType}
-                  onChange={(e) => setNewCaseType(e.target.value as any)}
-                  className="w-full"
-                >
-                  <option value="Criminal">Criminal Sessions</option>
-                  <option value="POCSO">POCSO Special Court</option>
-                  <option value="Matrimonial">Matrimonial / Family</option>
-                  <option value="Civil">Civil Suit</option>
-                </Select>
-              </Field>
-
-              <Field label="Primary Complainant / State">
-                <Input
-                  value={newComplainant}
-                  onChange={(e) => setNewComplainant(e.target.value)}
-                  required
-                />
-              </Field>
-
-              <Field label="Primary Accused / Respondent">
-                <Input
-                  value={newAccused}
-                  onChange={(e) => setNewAccused(e.target.value)}
-                  placeholder="e.g. Suresh Kumar"
-                  required
-                />
-              </Field>
-
-              <Field label="Initial Trial Stage">
-                <Input
-                  value={newStage}
-                  onChange={(e) => setNewStage(e.target.value)}
-                  required
-                />
-              </Field>
-
-              <Field label="Statutory Acts Cited">
-                <Input
-                  value={newActs}
-                  onChange={(e) => setNewActs(e.target.value)}
-                  required
-                />
-              </Field>
-
-              <Field label="First Hearing Date">
-                <Input
-                  type="date"
-                  value={newNextHearing}
-                  onChange={(e) => setNewNextHearing(e.target.value)}
-                  required
-                />
-              </Field>
-
-              <Field label="Police Station">
-                <Input
-                  value={newPoliceStation}
-                  onChange={(e) => setNewPoliceStation(e.target.value)}
-                  required
-                />
-              </Field>
-
-              <Field label="Lead Investigating Officer">
-                <Input
-                  value={newIoName}
-                  onChange={(e) => setNewIoName(e.target.value)}
-                  required
-                />
-              </Field>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4 border-t border-black/10">
-              <Button variant="outline" type="button" onClick={() => setIsAddCaseOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" type="submit">
-                Complete Case Intake
-              </Button>
-            </div>
-          </form>
-        </Modal>
-      )}
+      <ComprehensiveCaseIntakeModal
+        open={isAddCaseOpen}
+        onClose={() => setIsAddCaseOpen(false)}
+        onSuccess={(caseId) => {
+          setSelectedId(caseId)
+        }}
+      />
 
       {/* ========================================================================= */}
       {/* MODAL: DELETE CONFIRMATION                                                */}

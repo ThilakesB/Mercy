@@ -33,6 +33,7 @@ import {
   type HearingRecord,
   type SubmittingParty,
 } from '../lib/judicialStore'
+import ComprehensiveCaseIntakeModal from '../components/ComprehensiveCaseIntakeModal'
 import {
   Button,
   Card,
@@ -979,108 +980,14 @@ export default function Dashboard() {
       {/* 3. CRUD MODALS: ADD CASE, EDIT CASE, DELETE CASE, ADD DOCUMENT (.DOCX) */}
       {/* ===================================================================== */}
 
-      {/* MODAL 1: ADD NEW CASE */}
-      <Modal
+      {/* MODAL 1: ADD NEW CASE (8-STEP COMPREHENSIVE JUDICIAL INTAKE) */}
+      <ComprehensiveCaseIntakeModal
         open={isAddCaseOpen}
         onClose={() => setIsAddCaseOpen(false)}
-        title="Intake New Judicial Case Docket"
-        size="lg"
-      >
-        <form onSubmit={handleAddCaseSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Case Type">
-              <Select
-                value={newCaseType}
-                onChange={(e) => setNewCaseType(e.target.value as any)}
-                className="w-full"
-              >
-                <option value="Criminal">Criminal Sessions (BNS / BNSS)</option>
-                <option value="POCSO">POCSO Special Court</option>
-                <option value="Matrimonial">Matrimonial / Family</option>
-                <option value="Civil">Civil Suit</option>
-              </Select>
-            </Field>
-
-            <Field label="Complainant / Prosecution Party">
-              <Input
-                value={newComplainant}
-                onChange={(e) => setNewComplainant(e.target.value)}
-                placeholder="e.g. State (NCT of Delhi) or Informant Name"
-                required
-              />
-            </Field>
-
-            <Field label="Primary Accused / Respondent Name">
-              <Input
-                value={newAccused}
-                onChange={(e) => setNewAccused(e.target.value)}
-                placeholder="e.g. Rajesh Kumar"
-                required
-              />
-            </Field>
-
-            <Field label="Statutory Acts / Sections">
-              <Input
-                value={newActs}
-                onChange={(e) => setNewActs(e.target.value)}
-                placeholder="e.g. BNS s.103 / Arms Act s.25"
-                required
-              />
-            </Field>
-
-            <Field label="Police Station / Precinct">
-              <Input
-                value={newPoliceStation}
-                onChange={(e) => setNewPoliceStation(e.target.value)}
-                placeholder="e.g. PS Crime Branch"
-                required
-              />
-            </Field>
-
-            <Field label="Investigating Officer (IO)">
-              <Input
-                value={newIoName}
-                onChange={(e) => setNewIoName(e.target.value)}
-                placeholder="e.g. Insp. Pradeep Rawat"
-                required
-              />
-            </Field>
-
-            <Field label="Initial Trial Stage">
-              <Select
-                value={newStage}
-                onChange={(e) => setNewStage(e.target.value)}
-                className="w-full"
-              >
-                <option value="Framing of Charges">Framing of Charges</option>
-                <option value="Prosecution Evidence (PW Deposition)">Prosecution Evidence</option>
-                <option value="Cross-Examination of IO">Cross-Examination of IO</option>
-                <option value="Final Arguments">Final Arguments</option>
-                <option value="Judgment Reserved">Judgment Reserved</option>
-              </Select>
-            </Field>
-
-            <Field label="First Hearing Date">
-              <Input
-                type="date"
-                value={newNextHearing}
-                onChange={(e) => setNewNextHearing(e.target.value)}
-                required
-              />
-            </Field>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4 border-t border-black/10">
-            <Button variant="outline" type="button" onClick={() => setIsAddCaseOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" type="submit">
-              <Plus className="size-4" />
-              Ingest &amp; Assign Case Number
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        onSuccess={(caseId) => {
+          setSelectedCaseId(caseId)
+        }}
+      />
 
       {/* MODAL 2: EDIT CASE */}
       {selectedCase && (
