@@ -1,57 +1,12 @@
 import { useState } from 'react'
-import {
-  Shield,
-  Cloud,
-  CheckCircle2,
-  RefreshCw,
-  Lock,
-  Database,
-  Sliders,
-  Palette,
-  Terminal,
-  AlertTriangle,
-  Server,
-  Key,
-  ExternalLink,
-  Check,
-  Trash2,
-} from 'lucide-react'
+import { Cloud, CheckCircle2, RefreshCw } from 'lucide-react'
 import { judicialStore } from '../lib/judicialStore'
-import {
-  getSupabaseConfig,
-  setSupabaseConfig,
-  isSupabaseConfigured,
-  getSupabase,
-} from '../lib/supabase'
-import {
-  Button,
-  Card,
-  CardHeader,
-  PageHeader,
-  Field,
-  Input,
-  Select,
-  Switch,
-  Tag,
-  useApp,
-} from '../ui'
+import { Card, PageHeader, Select, useApp } from '../ui'
 
 export default function Settings() {
-  const { role, theme, setTheme, toast } = useApp()
+  const { theme, setTheme, toast } = useApp()
 
   const backupMeta = judicialStore.getBackupTelemetry()
-
-  const initialConfig = getSupabaseConfig()
-  const [supabaseUrl, setSupabaseUrl] = useState(
-    initialConfig.url || 'https://vodrmtqzqrmrcevmlvyg.supabase.co'
-  )
-  const [supabaseKey, setSupabaseKey] = useState(initialConfig.key || '')
-  const [isTestingSupabase, setIsTestingSupabase] = useState(false)
-  const [supabaseTestStatus, setSupabaseTestStatus] = useState<{
-    success?: boolean
-    msg?: string
-    latency?: number
-  } | null>(null)
 
   const [isSnapshotting, setIsSnapshotting] = useState(false)
   const [isVerifying, setIsVerifying] = useState(false)
@@ -59,79 +14,10 @@ export default function Settings() {
 
   const [notifications, setNotifications] = useState({
     statutoryBailAlerts: true,
-    remandTimeoutWarnings: true,
     inCameraPOCSOAlerts: true,
-    dailyDocketDigest: false,
   })
 
   const [autoLockTimeout, setAutoLockTimeout] = useState('15')
-
-  const handleSaveSupabaseConfig = (e?: React.FormEvent) => {
-    if (e) e.preventDefault()
-    if (!supabaseUrl.trim()) {
-      toast('Please enter a valid Supabase project URL', 'bad')
-      return
-    }
-    setSupabaseConfig(supabaseUrl.trim(), supabaseKey.trim())
-    toast('Supabase configuration saved! Testing connection...', 'ok')
-    handleTestSupabase()
-  }
-
-  const handleTestSupabase = async () => {
-    setIsTestingSupabase(true)
-    setSupabaseTestStatus(null)
-
-    const startTime = performance.now()
-    try {
-      const client = getSupabase()
-      if (!client) {
-        setSupabaseTestStatus({
-          success: false,
-          msg: 'Please save both a valid Project URL and Anon API Key to initialize the client.',
-        })
-        setIsTestingSupabase(false)
-        return
-      }
-
-      // Test query to Supabase cases table or check health
-      const { data, error } = await client.from('cases').select('id').limit(1)
-      const elapsed = Math.round(performance.now() - startTime)
-
-      if (error) {
-        // Even if table doesn't exist yet, if auth/connectivity worked, report specifics
-        if (error.code === 'PGRST204' || error.message?.includes('relation "public.cases" does not exist')) {
-          setSupabaseTestStatus({
-            success: true,
-            latency: elapsed,
-            msg: `Connected to Supabase project (${elapsed}ms)! Notice: Relational schema not yet migrated. Run 'supabase/migrations/001_initial_schema.sql' in SQL Editor.`,
-          })
-          toast('Connected to Supabase project! Schema migration required.', 'info')
-        } else {
-          setSupabaseTestStatus({
-            success: false,
-            latency: elapsed,
-            msg: `Supabase query returned: ${error.message} (Code: ${error.code})`,
-          })
-          toast(`Supabase connection error: ${error.message}`, 'bad')
-        }
-      } else {
-        setSupabaseTestStatus({
-          success: true,
-          latency: elapsed,
-          msg: `Connected successfully (${elapsed}ms)! Cloud database active and responding.`,
-        })
-        toast('Connected successfully to Supabase cloud database!', 'ok')
-      }
-    } catch (err: any) {
-      setSupabaseTestStatus({
-        success: false,
-        msg: `Connection failed: ${err.message || 'Network / CORS error'}. Verify project URL & key.`,
-      })
-      toast('Could not connect to Supabase endpoint', 'bad')
-    } finally {
-      setIsTestingSupabase(false)
-    }
-  }
 
   const handleManualBackup = () => {
     setIsSnapshotting(true)
@@ -151,171 +37,12 @@ export default function Settings() {
     }, 500)
   }
 
-  const isConfigured = isSupabaseConfigured()
-
   return (
     <div className="space-y-6">
       <PageHeader
         title="Bench Settings, Security & Cloud Backup"
         sub="Terminal profile configurations, optical appearance calibration, and cryptographic cloud disaster recovery vault. Certified for single-seat bench operations."
       />
-
-      {/* 1. SUPABASE DATABASE CONNECTION MANAGER */}
-      <Card className="bg-white p-6 sm:p-7 rounded-3xl space-y-6 shadow-sm border border-black/[0.06]">
-        <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-black/[0.06]">
-          <div className="flex items-center gap-3.5">
-            <div className="size-12 rounded-2xl bg-[#121316] text-white grid place-items-center">
-              <Database className="size-6 text-emerald-400" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2.5">
-                <h2 className="font-black text-sm uppercase tracking-wider text-zinc-900">
-                  Supabase Cloud Database Connection
-                </h2>
-                <span
-                  className={`px-3 py-1 rounded-full text-[11px] font-black border ${
-                    isConfigured
-                      ? 'bg-emerald-500/15 text-emerald-900 border-emerald-300/60'
-                      : 'bg-amber-500/15 text-amber-900 border-amber-300/60'
-                  }`}
-                >
-                  {isConfigured ? '● Cloud Connected' : '○ Pending API Key (Demo Mode)'}
-                </span>
-              </div>
-              <p className="text-xs text-zinc-500 font-medium mt-0.5">
-                Live PostgreSQL database link for court registries, criminal dossiers, case evidence, and hearings.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={handleTestSupabase}
-              disabled={isTestingSupabase}
-              className="px-4.5 py-2.5 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-900 text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-2 border border-black/5 shadow-xs"
-            >
-              <RefreshCw className={`size-3.5 ${isTestingSupabase ? 'animate-spin' : ''}`} />
-              <span>{isTestingSupabase ? 'Testing Connection...' : 'Test Connection'}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSaveSupabaseConfig()}
-              className="px-5 py-2.5 rounded-full bg-[#121316] hover:bg-zinc-800 text-white text-xs font-black transition-all cursor-pointer inline-flex items-center gap-2 shadow-xs"
-            >
-              <Check className="size-3.5 text-emerald-400" />
-              <span>Save &amp; Connect</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Credentials Form */}
-        <form onSubmit={handleSaveSupabaseConfig} className="grid md:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-black uppercase tracking-wider text-zinc-500 block">
-              Supabase Project URL:
-            </label>
-            <input
-              type="url"
-              value={supabaseUrl}
-              onChange={(e) => setSupabaseUrl(e.target.value)}
-              placeholder="https://vodrmtqzqrmrcevmlvyg.supabase.co"
-              className="w-full px-4 py-2.5 rounded-2xl bg-[#FAF7F0] border border-black/10 text-xs font-mono font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-black"
-              required
-            />
-            <span className="text-[10.5px] text-zinc-400 block">
-              Configured Project ID: <span className="font-mono font-bold text-zinc-700">vodrmtqzqrmrcevmlvyg</span>
-            </span>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-black uppercase tracking-wider text-zinc-500 block">
-              Supabase Anon Public API Key:
-            </label>
-            <input
-              type="password"
-              value={supabaseKey}
-              onChange={(e) => setSupabaseKey(e.target.value)}
-              placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-              className="w-full px-4 py-2.5 rounded-2xl bg-[#FAF7F0] border border-black/10 text-xs font-mono text-zinc-900 focus:outline-none focus:ring-2 focus:ring-black"
-            />
-            <span className="text-[10.5px] text-zinc-400 block">
-              Find this in your Supabase Dashboard &rarr; Project Settings &rarr; API &rarr; Project API keys (<span className="font-bold text-zinc-700">anon public</span>)
-            </span>
-          </div>
-        </form>
-
-        {/* Live Test Status Feedback Callout */}
-        {supabaseTestStatus && (
-          <div
-            className={`p-4 rounded-2xl border text-xs flex items-start gap-3 shadow-xs ${
-              supabaseTestStatus.success
-                ? 'bg-emerald-50/90 border-emerald-200 text-emerald-950'
-                : 'bg-rose-50/90 border-rose-200 text-rose-950'
-            }`}
-          >
-            {supabaseTestStatus.success ? (
-              <CheckCircle2 className="size-4.5 text-emerald-600 shrink-0 mt-0.5" />
-            ) : (
-              <AlertTriangle className="size-4.5 text-rose-600 shrink-0 mt-0.5" />
-            )}
-            <div className="space-y-1">
-              <span className="font-black text-xs block">
-                {supabaseTestStatus.success ? 'Supabase Connection Verified' : 'Connection Notice'}
-              </span>
-              <p className="font-medium text-xs leading-relaxed">{supabaseTestStatus.msg}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Database Migration & Schema Information Guide */}
-        <div className="p-4 rounded-2xl bg-[#F7F4EB] border border-black/5 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="space-y-0.5 max-w-xl">
-            <span className="font-black text-zinc-900 block text-xs">
-              Database Migration Ready: <span className="font-mono text-[11px]">supabase/migrations/001_initial_schema.sql</span>
-            </span>
-            <p className="text-[11px] text-zinc-600">
-              Includes full SQL schema: courts, cases, case_participants, evidence, chain of custody, hearings, judgments, and RLS policies.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              navigator.clipboard?.writeText('supabase db push')
-              toast('Copied "supabase db push" command to clipboard!', 'ok')
-            }}
-            className="px-4 py-2 rounded-full bg-white hover:bg-zinc-100 border border-black/10 font-bold text-xs text-zinc-900 shadow-xs cursor-pointer inline-flex items-center gap-1.5"
-          >
-            <Terminal className="size-3.5 text-zinc-600" />
-            <span>Copy CLI Push Command</span>
-          </button>
-        </div>
-
-        {/* Client Handover & Data Purge Controls */}
-        <div className="p-4.5 rounded-2xl bg-rose-50/80 border border-rose-200 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xs">
-          <div className="space-y-0.5 max-w-xl">
-            <span className="font-black text-rose-950 block text-xs">
-              Client Handover — Purge All Demo Records
-            </span>
-            <p className="text-[11px] text-rose-800 font-medium">
-              Wipe all mock cases, fake criminals, and test hearings to leave a completely empty registry for client data intake.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (window.confirm('Are you sure you want to purge all demo cases and mock records for client handover?')) {
-                judicialStore.resetToCleanState()
-                toast('All demo records purged! Database is now empty for client handover.', 'ok')
-              }
-            }}
-            className="px-4.5 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-xs cursor-pointer inline-flex items-center gap-1.5 transition-colors"
-          >
-            <Trash2 className="size-3.5" />
-            <span>Purge All Mock Records</span>
-          </button>
-        </div>
-      </Card>
 
       {/* PROMINENT CLOUD BACKUP SUBSYSTEM (MUST BE PROMINENT PER BRIEF) */}
       <Card className="bg-white p-6 rounded-3xl space-y-6 shadow-sm border border-black/[0.06]">
