@@ -18,6 +18,11 @@ import {
   AlertCircle,
   HelpCircle,
   MessageSquare,
+  Maximize2,
+  Minimize2,
+  Columns,
+  Zap,
+  Info,
 } from 'lucide-react'
 import { judicialStore, type StatutoryLaw } from '../lib/judicialStore'
 import { sendLegalChatMessage, type ChatMessage } from '../lib/gemini'
@@ -34,6 +39,7 @@ const SUGGESTED_QUERIES = [
   'Explain statutory bail provisions under Section 479 BNSS, 2023.',
   'What are mandatory in-camera requirements for victim deposition under POCSO?',
   'How does Section 23 of Bharatiya Sakshya Adhiniyam treat police confessions and discovery?',
+  'Distinguish between Section 103 (Murder) and Section 105 (Culpable Homicide) in BNS.',
 ]
 
 export default function LawReference() {
@@ -44,6 +50,7 @@ export default function LawReference() {
   const [selectedActFilter, setSelectedActFilter] = useState('ALL')
   const [selectedLawId, setSelectedLawId] = useState<string>(laws[0]?.id || '')
   const [activeTab, setActiveTab] = useState<'ai-chat' | 'statute-details'>('ai-chat')
+  const [viewLayout, setViewLayout] = useState<'split' | 'ai-focus'>('split')
 
   // AI Chatbot State
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -51,19 +58,30 @@ export default function LawReference() {
       id: 'welcome-1',
       role: 'assistant',
       content:
-        'Greetings, Hon’ble Bench. I am **Mercy Legal AI**, your authoritative judicial research assistant powered by Google Gemini.\n\nI can assist you with:\n- **Bharatiya Nyaya Sanhita (BNS, 2023)** & IPC comparisons\n- **Bharatiya Nagarik Suraksha Sanhita (BNSS, 2023)** procedural provisions\n- **Bharatiya Sakshya Adhiniyam (BSA, 2023)** rules of evidence\n- **POCSO, NDPS, Arms Act** & special penal statutes\n- Essential ingredients, statutory sentencing guidelines, and landmark Supreme Court precedents.\n\nSelect any section from the registry on the left, or ask any legal query below.',
+        'Greetings, Hon’ble Bench. I am **Mercy Legal AI**, your authoritative judicial research assistant powered by Google Gemini.\n\nI can assist you with:\n- **Bharatiya Nyaya Sanhita (BNS, 2023)** & IPC provisions\n- **Bharatiya Nagarik Suraksha Sanhita (BNSS, 2023)** procedural rules\n- **Bharatiya Sakshya Adhiniyam (BSA, 2023)** rules of evidence\n- **POCSO, NDPS, Arms Act** & special penal statutes\n- Essential ingredients, statutory sentencing guidelines, and landmark Supreme Court precedents.\n\nSelect any section from the directory or ask your statutory query directly below.',
       timestamp: 'Active',
     },
   ])
   const [inputPrompt, setInputPrompt] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const chatEndRef = useRef<HTMLDivElement>(null)
+
+  // Internal scroll container ref (Prevents window jump / zoom bug)
+  const chatScrollContainerRef = useRef<HTMLDivElement>(null)
+  const isInitialMount = useRef(true)
 
   const activeLaw = laws.find((l) => l.id === selectedLawId) || laws[0]
 
+  // Safe internal auto-scroll only when messages change after mount (Fixes window zooming/jump bug)
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
+
+    if (chatScrollContainerRef.current) {
+      chatScrollContainerRef.current.scrollTop = chatScrollContainerRef.current.scrollHeight
+    }
   }, [chatMessages, isGenerating])
 
   // Filtered laws list
@@ -138,6 +156,7 @@ export default function LawReference() {
 
   const handleAskAboutSection = (law: StatutoryLaw) => {
     setSelectedLawId(law.id)
+    setActiveTab('ai-chat')
     const prompt = `Please provide a thorough judicial analysis of ${law.section} (${law.title}) under ${law.actName}. Explain the essential legal ingredients the prosecution must prove, statutory sentencing guidelines, and relevant landmark Supreme Court precedents.`
     handleSendMessage(prompt)
   }
@@ -162,34 +181,115 @@ export default function LawReference() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* Page Header */}
       <PageHeader
         title="Authoritative Statutory Law Reference & AI Assistant"
         sub="Instant legal reference for codified Indian statutes (BNS, BNSS, BSA, POCSO, Arms Act). Powered by Google Gemini AI for deep statutory ingredient analysis and judicial case inquiries."
         actions={
           <div className="flex items-center gap-2">
+            {/* View Mode Toggle Button */}
+            <div className="flex items-center p-1 bg-zinc-100 rounded-xl border border-black/10 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setViewLayout('split')}
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  viewLayout === 'split'
+                    ? 'bg-black text-white shadow-xs'
+                    : 'text-zinc-600 hover:text-black'
+                }`}
+                title="Split View: Statute Directory & AI Assistant"
+              >
+                <Columns className="size-3.5" />
+                <span>Split View</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setViewLayout('ai-focus')}
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  viewLayout === 'ai-focus'
+                    ? 'bg-black text-white shadow-xs'
+                    : 'text-zinc-600 hover:text-black'
+                }`}
+                title="AI Focus View: Expanded Full-Width Chatbot"
+              >
+                <Maximize2 className="size-3.5 text-[#FF5C5C]" />
+                <span>AI Focus (Full View)</span>
+              </button>
+            </div>
+
             <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/60 text-emerald-800 text-xs font-bold">
               <Sparkles className="size-3 text-emerald-600 animate-pulse" />
-              <span>Gemini Legal AI: Active</span>
+              <span>Gemini 2.5 Active</span>
             </span>
           </div>
         }
       />
 
-      {/* Main Search & Act Filter Toolbar */}
-      <Card className="p-4 bg-white shadow-xs space-y-3">
+      {/* Prominent High-Visibility Hero Banner for AI Assistant */}
+      <div className="relative overflow-hidden rounded-2xl border-2 border-black/10 bg-gradient-to-r from-[#121316] via-zinc-900 to-[#1e2025] text-white p-4 sm:p-5 shadow-sm">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="size-11 sm:size-12 rounded-2xl bg-white/10 border border-white/20 grid place-items-center shrink-0 shadow-inner">
+              <Bot className="size-6 text-[#FF5C5C]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm sm:text-base font-black text-white">
+                  Mercy Judicial Legal AI Assistant
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold">
+                  ● READY FOR INQUIRY
+                </span>
+              </div>
+              <p className="text-xs text-zinc-300 mt-0.5">
+                Query Indian penal codes (BNS), evidentiary standards (BSA), and criminal procedure (BNSS) with instant precedent citations.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('ai-chat')
+                handleSendMessage('List the landmark Supreme Court principles on Section 103 BNS and circumstantial evidence.')
+              }}
+              className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/10 text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5"
+            >
+              <Zap className="size-3.5 text-amber-400" />
+              <span>Landmark Precedents</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('ai-chat')
+                handleSendMessage('Explain Section 23 BSA regarding disclosure statements and Section 27 IEA doctrine.')
+              }}
+              className="px-3.5 py-2 rounded-xl bg-[#FF5C5C] hover:bg-rose-600 text-white text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-xs"
+            >
+              <span>Examine Sec 23 BSA</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Search & Act Filter Toolbar (Only shown in Split View or when searching) */}
+      <Card className="p-3.5 sm:p-4 bg-white shadow-xs space-y-3">
         <div className="relative">
           <Search className="pointer-events-none absolute left-4.5 top-1/2 size-5 -translate-y-1/2 text-zinc-500" />
           <Input
             value={searchLaw}
             onChange={(e) => setSearchLaw(e.target.value)}
             placeholder="Search statutes, sections, or keywords (e.g. 103 BNS, Murder, 25 Arms, POCSO, Bail, Discovery 23)..."
-            className="pl-12 pr-6 h-13 text-sm sm:text-[15px] font-semibold rounded-full border-black/10 focus:border-black"
+            className="pl-12 pr-6 h-12 text-sm sm:text-[15px] font-semibold rounded-full border-black/10 focus:border-black"
           />
         </div>
 
         {/* Act Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+        <div className="flex items-center gap-2 overflow-x-auto pb-0.5 text-xs">
           <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider shrink-0 mr-1">
             Act Code:
           </span>
@@ -204,7 +304,7 @@ export default function LawReference() {
               key={act.id}
               type="button"
               onClick={() => setSelectedActFilter(act.id)}
-              className={`px-3.5 py-1.5 rounded-full font-bold transition-all cursor-pointer whitespace-nowrap text-xs ${
+              className={`px-3 py-1.5 rounded-full font-bold transition-all cursor-pointer whitespace-nowrap text-xs ${
                 selectedActFilter === act.id
                   ? 'bg-[#121316] text-white shadow-xs'
                   : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700'
@@ -216,108 +316,116 @@ export default function LawReference() {
         </div>
       </Card>
 
-      {/* 2-Column Split: Left Statute Directory, Right Gemini AI Chatbot & Details */}
-      <div className="grid gap-6 xl:grid-cols-[1.15fr_1.85fr]">
-        {/* Left Column: Statutory Law Index */}
-        <div className="space-y-4">
-          <Card className="bg-white p-4 space-y-3 shadow-xs">
-            <div className="flex items-center justify-between border-b border-black/[0.06] pb-2.5">
-              <div>
-                <h3 className="text-xs font-black uppercase tracking-wider text-zinc-900">
-                  Statute Directory ({filteredLaws.length} Indexed)
-                </h3>
-                <p className="text-[11px] text-zinc-500 font-medium">
-                  Select a section to analyze or query the AI assistant
-                </p>
-              </div>
-              <span className="text-[10.5px] px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600 font-semibold">
-                Bench 04
-              </span>
-            </div>
-
-            <div className="space-y-2.5 max-h-[680px] overflow-y-auto pr-1">
-              {filteredLaws.length === 0 ? (
-                <div className="p-8 text-center text-xs text-zinc-400 space-y-2">
-                  <BookOpen className="size-7 mx-auto text-zinc-300" />
-                  <p className="font-bold text-zinc-700">No matching statutes found</p>
-                  <p className="text-[11px]">Try searching section numbers like "103", "309", or "25".</p>
+      {/* Main Grid: Responsive Split View or Full AI Focus Mode */}
+      <div
+        className={`grid gap-6 ${
+          viewLayout === 'ai-focus'
+            ? 'grid-cols-1'
+            : 'grid-cols-1 lg:grid-cols-[1.1fr_1.9fr]'
+        }`}
+      >
+        {/* Left Column: Statutory Law Index (Hidden when in AI Focus mode) */}
+        {viewLayout === 'split' && (
+          <div className="space-y-4">
+            <Card className="bg-white p-4 space-y-3 shadow-xs">
+              <div className="flex items-center justify-between border-b border-black/[0.06] pb-2.5">
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-zinc-900">
+                    Statute Directory ({filteredLaws.length} Indexed)
+                  </h3>
+                  <p className="text-[11px] text-zinc-500 font-medium">
+                    Click any section to analyze or load into AI assistant
+                  </p>
                 </div>
-              ) : (
-                filteredLaws.map((law) => {
-                  const isSelected = law.id === selectedLawId
-                  return (
-                    <div
-                      key={law.id}
-                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer text-left relative ${
-                        isSelected
-                          ? 'border-[#FF5C5C] bg-[#FF5C5C]/5 shadow-xs ring-1 ring-[#FF5C5C]/40'
-                          : 'border-black/[0.05] bg-white hover:bg-zinc-50'
-                      }`}
-                      onClick={() => setSelectedLawId(law.id)}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-xs text-[#FF5C5C]">
-                            {law.section}
-                          </span>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 text-zinc-700">
-                            {law.actCode}
-                          </span>
+                <span className="text-[10.5px] px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600 font-semibold">
+                  Bench 04
+                </span>
+              </div>
+
+              <div className="space-y-2.5 max-h-[640px] overflow-y-auto pr-1">
+                {filteredLaws.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-zinc-400 space-y-2">
+                    <BookOpen className="size-7 mx-auto text-zinc-300" />
+                    <p className="font-bold text-zinc-700">No matching statutes found</p>
+                    <p className="text-[11px]">Try searching section numbers like "103", "309", or "25".</p>
+                  </div>
+                ) : (
+                  filteredLaws.map((law) => {
+                    const isSelected = law.id === selectedLawId
+                    return (
+                      <div
+                        key={law.id}
+                        className={`p-3.5 rounded-2xl border transition-all cursor-pointer text-left relative ${
+                          isSelected
+                            ? 'border-[#FF5C5C] bg-[#FF5C5C]/5 shadow-xs ring-1 ring-[#FF5C5C]/40'
+                            : 'border-black/[0.05] bg-white hover:bg-zinc-50'
+                        }`}
+                        onClick={() => setSelectedLawId(law.id)}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-xs text-[#FF5C5C]">
+                              {law.section}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 text-zinc-700">
+                              {law.actCode}
+                            </span>
+                          </div>
+
+                          {/* Quick Consult AI Button */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleAskAboutSection(law)
+                            }}
+                            className="px-2.5 py-1 rounded-full bg-zinc-100 hover:bg-[#121316] hover:text-white text-zinc-700 font-bold text-[10.5px] inline-flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                            title="Ask Gemini Legal AI about this section"
+                          >
+                            <Sparkles className="size-3 text-[#FF5C5C]" />
+                            <span>Ask AI</span>
+                          </button>
                         </div>
 
-                        {/* Quick Consult AI Button */}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleAskAboutSection(law)
-                          }}
-                          className="px-2 py-1 rounded-full bg-zinc-100 hover:bg-[#121316] hover:text-white text-zinc-700 font-bold text-[10.5px] inline-flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
-                          title="Ask Gemini Legal AI about this section"
-                        >
-                          <Sparkles className="size-3 text-[#FF5C5C]" />
-                          <span>Ask AI</span>
-                        </button>
+                        <div className="font-bold text-xs text-zinc-900 mt-1">
+                          {law.title}
+                        </div>
+
+                        <p className="text-[11px] text-zinc-500 mt-1 line-clamp-2 leading-relaxed">
+                          {law.description}
+                        </p>
                       </div>
+                    )
+                  })
+                )}
+              </div>
+            </Card>
+          </div>
+        )}
 
-                      <div className="font-bold text-xs text-zinc-900 mt-1">
-                        {law.title}
-                      </div>
-
-                      <p className="text-[11px] text-zinc-500 mt-1 line-clamp-2 leading-relaxed">
-                        {law.description}
-                      </p>
-                    </div>
-                  )
-                })
-              )}
-            </div>
-          </Card>
-        </div>
-
-        {/* Right Column: AI Chatbot & Statutory Details */}
+        {/* Right Column: AI Chatbot & Statutory Details (Made Primary & Highly Visible) */}
         <div className="space-y-4">
           {/* Navigation Tabs (AI Chatbot vs Official Statutory Text) */}
-          <div className="flex items-center justify-between bg-white p-2 rounded-2xl border border-black/[0.06] shadow-xs">
+          <div className="flex flex-wrap items-center justify-between bg-white p-2 rounded-2xl border border-black/[0.06] shadow-xs gap-2">
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setActiveTab('ai-chat')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
                   activeTab === 'ai-chat'
                     ? 'bg-[#121316] text-white shadow-xs'
                     : 'text-zinc-600 hover:bg-zinc-100'
                 }`}
               >
                 <Bot className="size-4 text-[#FF5C5C]" />
-                <span>Gemini Judicial AI Chatbot</span>
+                <span>Gemini Judicial AI Assistant</span>
                 <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('statute-details')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
                   activeTab === 'statute-details'
                     ? 'bg-[#121316] text-white shadow-xs'
                     : 'text-zinc-600 hover:bg-zinc-100'
@@ -328,27 +436,51 @@ export default function LawReference() {
               </button>
             </div>
 
-            {activeTab === 'ai-chat' && (
-              <button
-                type="button"
-                onClick={handleClearChat}
-                className="px-3 py-1.5 rounded-full text-zinc-500 hover:text-zinc-900 text-xs font-semibold hover:bg-zinc-100 transition-colors inline-flex items-center gap-1 cursor-pointer"
-                title="Clear chat transcript"
-              >
-                <RotateCcw className="size-3" />
-                <span>Clear Chat</span>
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {viewLayout === 'ai-focus' ? (
+                <button
+                  type="button"
+                  onClick={() => setViewLayout('split')}
+                  className="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                  title="Return to side-by-side view"
+                >
+                  <Minimize2 className="size-3.5" />
+                  <span>Show Directory</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setViewLayout('ai-focus')}
+                  className="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                  title="Expand AI Assistant full width"
+                >
+                  <Maximize2 className="size-3.5 text-[#FF5C5C]" />
+                  <span>Expand Chat</span>
+                </button>
+              )}
+
+              {activeTab === 'ai-chat' && (
+                <button
+                  type="button"
+                  onClick={handleClearChat}
+                  className="px-3 py-1.5 rounded-full text-zinc-500 hover:text-zinc-900 text-xs font-semibold hover:bg-zinc-100 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                  title="Clear chat transcript"
+                >
+                  <RotateCcw className="size-3" />
+                  <span>Clear</span>
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* TAB 1: GEMINI LEGAL AI CHATBOT INTERFACE */}
+          {/* TAB 1: GEMINI LEGAL AI CHATBOT INTERFACE (ENHANCED VISIBILITY) */}
           {activeTab === 'ai-chat' && (
-            <Card className="bg-white p-5 flex flex-col h-[700px] shadow-xs">
+            <Card className="bg-white p-4 sm:p-6 flex flex-col h-[720px] shadow-sm border border-black/10">
               {/* Active Statute Awareness Banner */}
               <div className="p-3 rounded-2xl bg-zinc-50 border border-zinc-200/80 mb-3 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
                   <span className="size-2 rounded-full bg-emerald-500" />
-                  <span className="text-zinc-500 font-medium">Context Statute:</span>
+                  <span className="text-zinc-500 font-medium">Loaded Statute Context:</span>
                   <span className="font-bold text-zinc-900">
                     {activeLaw.section} · {activeLaw.title} ({activeLaw.actCode})
                   </span>
@@ -356,43 +488,47 @@ export default function LawReference() {
                 <button
                   type="button"
                   onClick={() => handleAskAboutSection(activeLaw)}
-                  className="text-[11px] font-bold text-[#FF5C5C] hover:underline cursor-pointer"
+                  className="text-[11px] font-bold text-[#FF5C5C] hover:underline cursor-pointer flex items-center gap-1"
                 >
-                  Analyze Ingredients →
+                  <Sparkles className="size-3" />
+                  <span>Analyze Ingredients →</span>
                 </button>
               </div>
 
-              {/* Chat Message Scrollable Container */}
-              <div className="flex-1 overflow-y-auto space-y-3.5 pr-2">
+              {/* Chat Message Scrollable Container (Contained, smooth scroll without window jump) */}
+              <div
+                ref={chatScrollContainerRef}
+                className="flex-1 overflow-y-auto space-y-4 pr-2 scroll-smooth"
+              >
                 {chatMessages.map((msg) => {
                   const isUser = msg.role === 'user'
                   return (
                     <div
                       key={msg.id}
-                      className={`flex items-start gap-2.5 ${isUser ? 'flex-row-reverse' : ''}`}
+                      className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`}
                     >
                       <div
-                        className={`size-8 rounded-full grid place-items-center shrink-0 font-bold text-xs shadow-xs ${
+                        className={`size-9 rounded-2xl grid place-items-center shrink-0 font-bold text-xs shadow-xs ${
                           isUser
                             ? 'bg-[#121316] text-white'
                             : 'bg-emerald-600 text-white'
                         }`}
                       >
-                        {isUser ? <User className="size-4" /> : <Bot className="size-4" />}
+                        {isUser ? <User className="size-4" /> : <Bot className="size-4.5" />}
                       </div>
 
                       <div
-                        className={`max-w-[85%] rounded-3xl p-4 text-xs leading-relaxed space-y-2 relative group ${
+                        className={`max-w-[85%] rounded-3xl p-4 sm:p-5 text-xs sm:text-[13px] leading-relaxed space-y-2 relative group shadow-xs ${
                           isUser
                             ? 'bg-[#121316] text-white rounded-tr-xs'
-                            : 'bg-[#F7F4EB] text-zinc-900 border border-black/[0.04] rounded-tl-xs'
+                            : 'bg-[#F7F4EB] text-zinc-900 border border-black/[0.06] rounded-tl-xs'
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-3 text-[10px] opacity-75 border-b border-current/10 pb-1 mb-1">
+                        <div className="flex items-center justify-between gap-3 text-[10.5px] opacity-75 border-b border-current/10 pb-1.5 mb-1.5">
                           <span className="font-bold">
-                            {isUser ? 'Hon. Judge' : 'Mercy Legal AI (Gemini 2.5 Flash)'}
+                            {isUser ? 'Hon. Presiding Judge' : 'Mercy Legal AI (Gemini 2.5 Flash)'}
                           </span>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-2">
                             <span>{msg.timestamp}</span>
                             {!isUser && (
                               <button
@@ -402,16 +538,16 @@ export default function LawReference() {
                                 title="Copy legal text"
                               >
                                 {copiedId === msg.id ? (
-                                  <Check className="size-3 text-emerald-600" />
+                                  <Check className="size-3.5 text-emerald-600" />
                                 ) : (
-                                  <Copy className="size-3" />
+                                  <Copy className="size-3.5" />
                                 )}
                               </button>
                             )}
                           </div>
                         </div>
 
-                        <div className="whitespace-pre-wrap font-sans text-xs sm:text-[12.5px] leading-relaxed">
+                        <div className="whitespace-pre-wrap font-sans leading-relaxed">
                           {msg.content}
                         </div>
                       </div>
@@ -420,17 +556,18 @@ export default function LawReference() {
                 })}
 
                 {isGenerating && (
-                  <div className="flex items-start gap-2.5">
-                    <div className="size-8 rounded-full bg-emerald-600 text-white grid place-items-center shrink-0 shadow-xs">
-                      <Bot className="size-4 animate-spin" />
+                  <div className="flex items-start gap-3">
+                    <div className="size-9 rounded-2xl bg-emerald-600 text-white grid place-items-center shrink-0 shadow-xs">
+                      <Bot className="size-4.5 animate-spin" />
                     </div>
-                    <div className="bg-[#F7F4EB] p-4 rounded-3xl rounded-tl-xs border border-black/5 text-xs text-zinc-600 flex items-center gap-2">
+                    <div className="bg-[#F7F4EB] p-4 rounded-3xl rounded-tl-xs border border-black/5 text-xs text-zinc-600 flex items-center gap-2.5">
                       <Sparkles className="size-4 text-[#FF5C5C] animate-pulse" />
-                      <span>Reviewing statutes &amp; case precedents via Gemini Legal Engine...</span>
+                      <span className="font-medium">
+                        Analyzing codified statutes, precedents, and sentencing matrices via Gemini...
+                      </span>
                     </div>
                   </div>
                 )}
-                <div ref={chatEndRef} />
               </div>
 
               {/* Suggested Quick Prompt Chips */}
@@ -441,37 +578,37 @@ export default function LawReference() {
                     key={idx}
                     type="button"
                     onClick={() => handleSendMessage(q)}
-                    className="px-3 py-1 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 whitespace-nowrap transition-colors cursor-pointer shrink-0 font-medium border border-black/5"
+                    className="px-3.5 py-1.5 rounded-full bg-zinc-100 hover:bg-[#121316] hover:text-white text-zinc-700 whitespace-nowrap transition-all cursor-pointer shrink-0 font-medium border border-black/5"
                   >
                     {q}
                   </button>
                 ))}
               </div>
 
-              {/* Chat Input Field */}
+              {/* Chat Input Field (Prominent & High Visibility) */}
               <form
                 onSubmit={(e) => {
                   e.preventDefault()
                   handleSendMessage()
                 }}
-                className="pt-2 flex items-center gap-2 border-t border-black/[0.06]"
+                className="pt-3 flex items-center gap-2.5 border-t border-black/[0.08]"
               >
                 <div className="relative flex-1">
                   <input
                     value={inputPrompt}
                     onChange={(e) => setInputPrompt(e.target.value)}
-                    placeholder={`Ask a judicial question about ${activeLaw.section} or any legal matter...`}
-                    className="w-full h-11.5 pl-4 pr-10 rounded-full border border-black/10 bg-zinc-50 focus:bg-white text-xs sm:text-sm font-medium focus:border-black focus:outline-none transition-all"
+                    placeholder={`Ask a legal query about ${activeLaw.section} or any statute (Press Enter to query)...`}
+                    className="w-full h-13 pl-5 pr-10 rounded-full border-2 border-black/15 bg-zinc-50/70 focus:bg-white text-xs sm:text-sm font-semibold focus:border-black focus:outline-none transition-all shadow-xs"
                     disabled={isGenerating}
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={!inputPrompt.trim() || isGenerating}
-                  className="size-11.5 rounded-full bg-[#121316] text-white grid place-items-center hover:bg-black disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shrink-0 shadow-sm"
-                  title="Send query"
+                  className="size-13 rounded-full bg-[#121316] text-white grid place-items-center hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shrink-0 shadow-md active:scale-95"
+                  title="Send query to Gemini Legal AI"
                 >
-                  <Send className="size-4 text-white" />
+                  <Send className="size-4.5 text-white" />
                 </button>
               </form>
             </Card>
