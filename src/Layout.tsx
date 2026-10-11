@@ -29,6 +29,8 @@ import {
   SlidersHorizontal,
   PanelLeftClose,
   PanelLeftOpen,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { judicialStore } from './lib/judicialStore'
 import { isSupabaseConfigured } from './lib/supabase'
@@ -313,29 +315,24 @@ export default function Layout() {
     )
   }
 
-  const isEmailAllowed = Boolean(
-    user?.email &&
-    ['thilakesb@gmail.com', 'bthilakes@gmail.com'].includes(user.email.toLowerCase().trim())
-  )
-
-  if (!authed || !isEmailAllowed) {
+  if (!authed) {
     return <Navigate to="/login" replace />
   }
 
   return (
     <div className="min-h-screen bg-background text-foreground flex p-2 md:p-3.5 transition-colors duration-200">
-      {/* Sleek Dark Rounded Sidebar */}
+      {/* Sleek Dark Rounded Sidebar with Smooth Hardware-Accelerated Transition */}
       <aside
-        className={`bg-[#121316] text-white rounded-[28px] shrink-0 flex flex-col justify-between shadow-2xl transition-all duration-300 ${
+        className={`bg-[#121316] text-white rounded-[28px] shrink-0 flex flex-col justify-between shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] select-none z-40 ${
           mobileMenuOpen
-            ? 'fixed inset-y-3 left-3 z-50 w-64 p-4.5'
+            ? 'fixed inset-y-3 left-3 z-50 w-64 p-4.5 translate-x-0 opacity-100'
             : sidebarHidden
-            ? 'hidden'
-            : 'hidden md:flex w-56 p-4.5'
+            ? 'w-0 opacity-0 -translate-x-12 p-0 m-0 pointer-events-none overflow-hidden border-0'
+            : 'hidden md:flex w-60 opacity-100 translate-x-0 p-4.5 overflow-hidden'
         }`}
       >
         <div className="space-y-6">
-          {/* Brand Logo with Coral Pill Dot & Desktop Hide Button */}
+          {/* Brand Logo with Coral Pill Dot */}
           <div className="flex items-center justify-between px-2 pt-1">
             <NavLink to="/" className="flex items-center gap-2">
               <span className="font-black text-2xl tracking-tight text-white font-sans">
@@ -343,23 +340,12 @@ export default function Layout() {
               </span>
               <span className="size-2 rounded-full bg-[#FF5C5C]" />
             </NavLink>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={toggleSidebar}
-                className="hidden md:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] transition-colors cursor-pointer border border-white/10"
-                title="Hide Sidebar (Ctrl+B)"
-              >
-                <PanelLeftClose className="size-3.5" />
-                <span>Hide</span>
-              </button>
-              <button
-                onClick={() => setMobileMenuOpen(false)}
-                className="md:hidden text-zinc-400 hover:text-white"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="md:hidden text-zinc-400 hover:text-white cursor-pointer"
+            >
+              <X className="size-4" />
+            </button>
           </div>
 
           {/* General Section */}
@@ -437,16 +423,6 @@ export default function Layout() {
           </div>
 
           <button
-            type="button"
-            onClick={toggleSidebar}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-zinc-300 hover:text-white bg-white/[0.06] hover:bg-white/10 border border-white/5 transition-colors cursor-pointer"
-            title="Collapse / Hide Sidebar"
-          >
-            <PanelLeftClose className="size-3.5" />
-            <span>Hide Sidebar</span>
-          </button>
-
-          <button
             onClick={() => setAuthed(false)}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-rose-400 hover:bg-white/[0.04] transition-colors cursor-pointer"
           >
@@ -456,8 +432,32 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 px-2 md:px-5 py-1">
+      {/* Creative Brutalist Intersecting Seam Tab Button (Desktop) */}
+      <div className="hidden md:flex items-center relative z-50 self-center -ml-3 mr-1">
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className={`group relative flex flex-col items-center justify-center py-4 px-1.5 rounded-full border-2 border-black transition-all cursor-pointer shadow-[2px_2px_0px_#000] hover:shadow-[3px_3px_0px_#FF5C5C] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none ${
+            sidebarHidden
+              ? 'bg-black text-white hover:bg-zinc-900 ring-2 ring-black/20'
+              : 'bg-[#FAF8F2] text-black hover:bg-white'
+          }`}
+          title={sidebarHidden ? "Expand Terminal Sidebar (Ctrl+B)" : "Hide Terminal Sidebar (Ctrl+B)"}
+        >
+          <div className="flex flex-col items-center gap-1.5 text-[9px] font-mono font-black">
+            <span className={`size-1.5 rounded-full ${sidebarHidden ? 'bg-[#FF5C5C] animate-pulse' : 'bg-emerald-500'}`} />
+            {sidebarHidden ? (
+              <ChevronRight className="size-3 text-[#FF5C5C] group-hover:scale-125 transition-transform" />
+            ) : (
+              <ChevronLeft className="size-3 text-black group-hover:scale-125 transition-transform" />
+            )}
+            <span className="size-1 rounded-full bg-zinc-400" />
+          </div>
+        </button>
+      </div>
+
+      {/* Main Content Area with Smooth Fluid Transition */}
+      <div className="flex-1 flex flex-col min-w-0 px-2 md:px-5 py-1 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]">
         {/* Top Floating Utility Header */}
         <header className="min-h-20 flex items-center justify-between gap-4 mb-5">
           <div className="flex items-center gap-3">
@@ -469,26 +469,27 @@ export default function Layout() {
               <Menu className="size-5" />
             </button>
 
-            {/* Clear Desktop Sidebar Toggle Button */}
+            {/* Creative Swiss Brutalist Sidebar Toggle Button */}
             <button
               type="button"
               onClick={toggleSidebar}
-              className={`flex items-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-full border text-xs font-bold transition-all cursor-pointer shadow-sm shrink-0 ${
+              className={`hidden md:inline-flex items-center gap-2.5 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl border-2 border-black font-mono font-black text-xs transition-all cursor-pointer shadow-[3px_3px_0px_#121316] hover:shadow-[4px_4px_0px_#FF5C5C] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none shrink-0 ${
                 sidebarHidden
-                  ? 'bg-[#121316] text-white hover:bg-zinc-800 border-black ring-2 ring-black/20'
-                  : 'bg-white text-zinc-800 hover:bg-zinc-50 border-black/10 hover:border-black/25'
+                  ? 'bg-black text-white hover:bg-zinc-900 ring-1 ring-black'
+                  : 'bg-[#FAF8F2] text-black hover:bg-white'
               }`}
-              title={sidebarHidden ? 'Show Sidebar (Ctrl+B)' : 'Hide Sidebar (Ctrl+B)'}
+              title={sidebarHidden ? 'Expand Terminal Sidebar (Ctrl+B)' : 'Collapse Terminal Sidebar (Ctrl+B)'}
             >
+              <span className={`size-2 rounded-full ${sidebarHidden ? 'bg-[#FF5C5C] animate-pulse' : 'bg-emerald-500'}`} />
               {sidebarHidden ? (
                 <>
                   <PanelLeftOpen className="size-4 text-[#FF5C5C]" />
-                  <span>Show Sidebar</span>
+                  <span className="tracking-wider">[ ☵ SHOW SIDEBAR ]</span>
                 </>
               ) : (
                 <>
-                  <PanelLeftClose className="size-4 text-zinc-600" />
-                  <span>Hide Sidebar</span>
+                  <PanelLeftClose className="size-4 text-zinc-700" />
+                  <span className="tracking-wider">[ ◀ FOLD SIDEBAR ]</span>
                 </>
               )}
             </button>
