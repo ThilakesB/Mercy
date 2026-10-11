@@ -37,6 +37,7 @@ import { cn, useApp, Button } from "./ui"
 
 const navGeneral = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/case/new/details", label: "+ New Case Intake", icon: Plus },
   { to: "/schedule", label: "Schedule", icon: History },
   { to: "/cases", label: "Case Files", icon: Briefcase },
   { to: "/criminals", label: "Criminals", icon: Users2 },

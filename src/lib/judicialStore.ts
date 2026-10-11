@@ -197,7 +197,30 @@ export interface FullCaseRecord {
   nextHearing: string
   judge: string
   policeStation: string
-  fir: { no: string; date: string }
+  fir: {
+    no: string
+    date: string
+    time?: string
+    gdNo?: string
+    gdTime?: string
+    complainantName?: string
+    complainantContact?: string
+    dutyOfficer?: string
+    infoType?: string
+    delayReason?: string
+    docFileName?: string
+    docFileSize?: string
+    docStatus?: string
+  }
+  intakeDocuments?: {
+    id: string
+    title: string
+    category: string
+    fileName: string
+    fileSize: string
+    uploadDate: string
+    status: 'Verified' | 'Uploaded' | 'Pending'
+  }[]
   io: InvestigatingOfficer
   parties: {
     role: 'Complainant / Offended Party' | 'Accused' | 'Victim' | 'Key Witness' | 'Prosecutor' | 'Defense Counsel'

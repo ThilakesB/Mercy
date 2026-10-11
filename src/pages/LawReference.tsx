@@ -34,14 +34,6 @@ import {
   useApp,
 } from '../ui'
 
-const SUGGESTED_QUERIES = [
-  'What are the essential ingredients to prove murder under Section 103 BNS?',
-  'Explain statutory bail provisions under Section 479 BNSS, 2023.',
-  'What are mandatory in-camera requirements for victim deposition under POCSO?',
-  'How does Section 23 of Bharatiya Sakshya Adhiniyam treat police confessions and discovery?',
-  'Distinguish between Section 103 (Murder) and Section 105 (Culpable Homicide) in BNS.',
-]
-
 export default function LawReference() {
   const { toast } = useApp()
   const laws = judicialStore.getStatutoryLaws()
@@ -57,8 +49,7 @@ export default function LawReference() {
     {
       id: 'welcome-1',
       role: 'assistant',
-      content:
-        'Greetings, Hon’ble Bench. I am **Mercy Legal AI**, your authoritative judicial research assistant powered by Google Gemini.\n\nI can assist you with:\n- **Bharatiya Nyaya Sanhita (BNS, 2023)** & IPC provisions\n- **Bharatiya Nagarik Suraksha Sanhita (BNSS, 2023)** procedural rules\n- **Bharatiya Sakshya Adhiniyam (BSA, 2023)** rules of evidence\n- **POCSO, NDPS, Arms Act** & special penal statutes\n- Essential ingredients, statutory sentencing guidelines, and landmark Supreme Court precedents.\n\nSelect any section from the directory or ask your statutory query directly below.',
+      content: 'Ready for your inquiry, Hon’ble Bench. Inquire into any statutory provision, ingredients, or case precedents below.',
       timestamp: 'Active',
     },
   ])
@@ -473,58 +464,62 @@ export default function LawReference() {
             </div>
           </div>
 
-          {/* TAB 1: GEMINI LEGAL AI CHATBOT INTERFACE (ENHANCED VISIBILITY) */}
+          {/* TAB 1: GEMINI LEGAL AI CHATBOT INTERFACE (MINIMAL, DISTRACTION-FREE CHAT BOARD) */}
           {activeTab === 'ai-chat' && (
-            <Card className="bg-white p-4 sm:p-6 flex flex-col h-[720px] shadow-sm border border-black/10">
-              {/* Active Statute Awareness Banner */}
-              <div className="p-3 rounded-2xl bg-zinc-50 border border-zinc-200/80 mb-3 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-emerald-500" />
-                  <span className="text-zinc-500 font-medium">Loaded Statute Context:</span>
-                  <span className="font-bold text-zinc-900">
+            <Card className="bg-white p-4 sm:p-6 flex flex-col h-[740px] shadow-sm border border-black/10">
+              {/* Minimal Section Context Bar */}
+              <div className="px-4 py-2.5 rounded-2xl bg-zinc-50 border border-zinc-200/70 mb-3 flex items-center justify-between text-xs sm:text-sm">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
+                  <span className="text-zinc-500 font-medium shrink-0">Statute Context:</span>
+                  <span className="font-bold text-zinc-900 truncate">
                     {activeLaw.section} · {activeLaw.title} ({activeLaw.actCode})
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleAskAboutSection(activeLaw)}
-                  className="text-[11px] font-bold text-[#FF5C5C] hover:underline cursor-pointer flex items-center gap-1"
+                  className="text-xs font-bold text-[#FF5C5C] hover:underline cursor-pointer flex items-center gap-1 shrink-0 ml-2"
                 >
-                  <Sparkles className="size-3" />
-                  <span>Analyze Ingredients →</span>
+                  <Sparkles className="size-3.5" />
+                  <span>Analyze Ingredients</span>
                 </button>
               </div>
 
-              {/* Chat Message Scrollable Container (Contained, smooth scroll without window jump) */}
+              {/* Chat Message Scrollable Container */}
               <div
                 ref={chatScrollContainerRef}
-                className="flex-1 overflow-y-auto space-y-4 pr-2 scroll-smooth"
+                className="flex-1 overflow-y-auto space-y-5 pr-2 scroll-smooth"
               >
                 {chatMessages.map((msg) => {
                   const isUser = msg.role === 'user'
                   return (
                     <div
                       key={msg.id}
-                      className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`}
+                      className={`flex items-start gap-3.5 ${isUser ? 'flex-row-reverse' : ''}`}
                     >
                       <div
-                        className={`size-9 rounded-2xl grid place-items-center shrink-0 font-bold text-xs shadow-xs ${
+                        className={`size-10 sm:size-11 rounded-2xl grid place-items-center shrink-0 font-bold text-xs shadow-xs ${
                           isUser
                             ? 'bg-[#121316] text-white'
                             : 'bg-emerald-600 text-white'
                         }`}
                       >
-                        {isUser ? <User className="size-4" /> : <Bot className="size-4.5" />}
+                        {isUser ? <User className="size-5" /> : <Bot className="size-5" />}
                       </div>
 
                       <div
-                        className={`max-w-[85%] rounded-3xl p-4 sm:p-5 text-xs sm:text-[13px] leading-relaxed space-y-2 relative group shadow-xs ${
+                        className={`max-w-[86%] rounded-3xl p-5 sm:p-6 space-y-2 relative group shadow-xs ${
                           isUser
                             ? 'bg-[#121316] text-white rounded-tr-xs'
-                            : 'bg-[#F7F4EB] text-zinc-900 border border-black/[0.06] rounded-tl-xs'
+                            : 'bg-[#FBF9F4] text-zinc-900 border border-black/[0.08] rounded-tl-xs'
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-3 text-[10.5px] opacity-75 border-b border-current/10 pb-1.5 mb-1.5">
+                        <div
+                          className={`flex items-center justify-between gap-3 text-xs pb-2 mb-1 border-b ${
+                            isUser ? 'border-white/10 text-zinc-300' : 'border-black/[0.06] text-zinc-500'
+                          }`}
+                        >
                           <span className="font-bold">
                             {isUser ? 'Hon. Presiding Judge' : 'Mercy Legal AI (Gemini 2.5 Flash)'}
                           </span>
@@ -538,16 +533,16 @@ export default function LawReference() {
                                 title="Copy legal text"
                               >
                                 {copiedId === msg.id ? (
-                                  <Check className="size-3.5 text-emerald-600" />
+                                  <Check className="size-4 text-emerald-600" />
                                 ) : (
-                                  <Copy className="size-3.5" />
+                                  <Copy className="size-4" />
                                 )}
                               </button>
                             )}
                           </div>
                         </div>
 
-                        <div className="whitespace-pre-wrap font-sans leading-relaxed">
+                        <div className="whitespace-pre-wrap font-sans text-base sm:text-[17px] leading-relaxed font-normal">
                           {msg.content}
                         </div>
                       </div>
@@ -556,12 +551,12 @@ export default function LawReference() {
                 })}
 
                 {isGenerating && (
-                  <div className="flex items-start gap-3">
-                    <div className="size-9 rounded-2xl bg-emerald-600 text-white grid place-items-center shrink-0 shadow-xs">
-                      <Bot className="size-4.5 animate-spin" />
+                  <div className="flex items-start gap-3.5">
+                    <div className="size-10 sm:size-11 rounded-2xl bg-emerald-600 text-white grid place-items-center shrink-0 shadow-xs">
+                      <Bot className="size-5 animate-spin" />
                     </div>
-                    <div className="bg-[#F7F4EB] p-4 rounded-3xl rounded-tl-xs border border-black/5 text-xs text-zinc-600 flex items-center gap-2.5">
-                      <Sparkles className="size-4 text-[#FF5C5C] animate-pulse" />
+                    <div className="bg-[#FBF9F4] p-4.5 rounded-3xl rounded-tl-xs border border-black/5 text-sm sm:text-base text-zinc-700 flex items-center gap-3">
+                      <Sparkles className="size-4.5 text-[#FF5C5C] animate-pulse" />
                       <span className="font-medium">
                         Analyzing codified statutes, precedents, and sentencing matrices via Gemini...
                       </span>
@@ -570,45 +565,30 @@ export default function LawReference() {
                 )}
               </div>
 
-              {/* Suggested Quick Prompt Chips */}
-              <div className="pt-3 pb-2 flex items-center gap-2 overflow-x-auto text-[11px]">
-                <span className="font-bold text-zinc-400 shrink-0">Quick Queries:</span>
-                {SUGGESTED_QUERIES.map((q, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleSendMessage(q)}
-                    className="px-3.5 py-1.5 rounded-full bg-zinc-100 hover:bg-[#121316] hover:text-white text-zinc-700 whitespace-nowrap transition-all cursor-pointer shrink-0 font-medium border border-black/5"
-                  >
-                    {q}
-                  </button>
-                ))}
-              </div>
-
-              {/* Chat Input Field (Prominent & High Visibility) */}
+              {/* Chat Input Field (Clean, Large Font Size, No Suggestions) */}
               <form
                 onSubmit={(e) => {
                   e.preventDefault()
                   handleSendMessage()
                 }}
-                className="pt-3 flex items-center gap-2.5 border-t border-black/[0.08]"
+                className="pt-3.5 flex items-center gap-3 border-t border-black/[0.08]"
               >
                 <div className="relative flex-1">
                   <input
                     value={inputPrompt}
                     onChange={(e) => setInputPrompt(e.target.value)}
                     placeholder={`Ask a legal query about ${activeLaw.section} or any statute (Press Enter to query)...`}
-                    className="w-full h-13 pl-5 pr-10 rounded-full border-2 border-black/15 bg-zinc-50/70 focus:bg-white text-xs sm:text-sm font-semibold focus:border-black focus:outline-none transition-all shadow-xs"
+                    className="w-full h-14 pl-6 pr-6 rounded-full border-2 border-black/15 bg-zinc-50/70 focus:bg-white text-base font-semibold focus:border-black focus:outline-none transition-all shadow-xs placeholder:text-zinc-400 placeholder:text-sm sm:placeholder:text-base"
                     disabled={isGenerating}
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={!inputPrompt.trim() || isGenerating}
-                  className="size-13 rounded-full bg-[#121316] text-white grid place-items-center hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shrink-0 shadow-md active:scale-95"
+                  className="size-14 rounded-full bg-[#121316] text-white grid place-items-center hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shrink-0 shadow-md active:scale-95"
                   title="Send query to Gemini Legal AI"
                 >
-                  <Send className="size-4.5 text-white" />
+                  <Send className="size-5 text-white" />
                 </button>
               </form>
             </Card>
