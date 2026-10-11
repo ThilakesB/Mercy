@@ -53,46 +53,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     import('./lib/firebase').then(({ auth, onAuthStateChanged, signOutFromFirebase }) => {
       unsub = onAuthStateChanged(auth, (fbUser) => {
         if (fbUser && fbUser.email) {
-          const email = fbUser.email.trim().toLowerCase()
-          if (AUTHORIZED_EMAILS.includes(email)) {
-            const profile: UserProfile = {
-              name: fbUser.displayName || email.split('@')[0],
-              email: fbUser.email,
-              photoURL: fbUser.photoURL,
-            }
-            setAuthedState(true)
-            setUserState(profile)
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('mercy_authed', 'true')
-              localStorage.setItem('mercy_user', JSON.stringify(profile))
-            }
-          } else {
-            // Unwhitelisted account: forcefully sign out and clear credentials
-            signOutFromFirebase().catch(() => {})
-            setAuthedState(false)
-            setUserState(null)
-            if (typeof window !== 'undefined') {
-              localStorage.removeItem('mercy_authed')
-              localStorage.removeItem('mercy_user')
-            }
+          const profile: UserProfile = {
+            name: fbUser.displayName || fbUser.email.split('@')[0],
+            email: fbUser.email,
+            photoURL: fbUser.photoURL,
+          }
+          setAuthedState(true)
+          setUserState(profile)
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('mercy_authed', 'true')
+            localStorage.setItem('mercy_user', JSON.stringify(profile))
           }
         } else {
-          // Check if valid passkey session exists
+          // Check if valid session exists
           const savedAuthed = typeof window !== 'undefined' ? localStorage.getItem('mercy_authed') : null
           const savedUserStr = typeof window !== 'undefined' ? localStorage.getItem('mercy_user') : null
           if (savedAuthed === 'true' && savedUserStr) {
             try {
               const parsed = JSON.parse(savedUserStr)
-              if (parsed?.email && AUTHORIZED_EMAILS.includes(parsed.email.toLowerCase().trim())) {
+              if (parsed?.email) {
                 setAuthedState(true)
                 setUserState(parsed)
               } else {
                 setAuthedState(false)
                 setUserState(null)
-                if (typeof window !== 'undefined') {
-                  localStorage.removeItem('mercy_authed')
-                  localStorage.removeItem('mercy_user')
-                }
               }
             } catch {
               setAuthedState(false)

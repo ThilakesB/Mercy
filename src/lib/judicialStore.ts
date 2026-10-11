@@ -357,11 +357,13 @@ export const INITIAL_STATUTORY_LAWS: StatutoryLaw[] = [
   },
 ]
 
+import { SEED_CASES } from './seedCases'
+
 export const INITIAL_PUNISHMENTS: PunishmentRecord[] = []
 export const INITIAL_DOCUMENTS: DocumentRecord[] = []
 export const INITIAL_HEARINGS: HearingRecord[] = []
 export const INITIAL_ALARMS: AlarmRecord[] = []
-export const INITIAL_CASES: FullCaseRecord[] = []
+export const INITIAL_CASES: FullCaseRecord[] = SEED_CASES
 
 // ============================================================================
 // STORE STATE WITH LOCALSTORAGE PERSISTENCE
@@ -443,6 +445,9 @@ class JudicialStoreService {
 
   constructor() {
     this.cases = loadFromStorage(STORAGE_KEYS.CASES, INITIAL_CASES)
+    if (!this.cases || this.cases.length === 0) {
+      this.cases = [...SEED_CASES]
+    }
     this.criminals = loadFromStorage(STORAGE_KEYS.CRIMINALS, INITIAL_CRIMINALS)
     this.lawyers = loadFromStorage(STORAGE_KEYS.LAWYERS, INITIAL_LAWYERS)
     this.hearings = loadFromStorage(STORAGE_KEYS.HEARINGS, INITIAL_HEARINGS)

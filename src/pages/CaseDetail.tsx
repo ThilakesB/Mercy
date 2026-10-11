@@ -53,8 +53,9 @@ import {
   Select,
   useApp,
 } from '../ui'
+import OfficialCaseDocument from '../components/OfficialCaseDocument'
 
-type CaseTab = 'case-file' | 'facts-issues' | 'evidence' | 'law-arguments' | 'judgment-prep'
+type CaseTab = 'official-document' | 'case-file' | 'facts-issues' | 'evidence' | 'law-arguments' | 'judgment-prep'
 
 export default function CaseDetail() {
   const { id } = useParams<{ id: string }>()
@@ -282,6 +283,14 @@ export default function CaseDetail() {
               <>
                 <button
                   type="button"
+                  onClick={() => setActiveTab('official-document')}
+                  className="px-4 py-2 rounded-full bg-black hover:bg-zinc-800 text-white text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <FileText className="size-3.5 text-[#FF5C5C]" />
+                  <span>Master Case Document</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setScheduleModalOpen(true)}
                   className="px-4 py-2 rounded-full bg-white hover:bg-zinc-100 border border-black/[0.08] text-xs font-bold text-zinc-800 transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
                 >
@@ -338,6 +347,7 @@ export default function CaseDetail() {
       {/* Case File Structure Navigation Tabs (Matching User Specification 1 to 5) */}
       <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-white/80 backdrop-blur-md rounded-2xl border border-black/[0.06] shadow-xs">
         {[
+          { key: 'official-document', label: '★ Official Case Document (Total Info)' },
           { key: 'case-file', label: '1. Complete Case File & Checklist' },
           { key: 'facts-issues', label: '2. Facts & Issues' },
           { key: 'evidence', label: '3. Evidence & Admissibility' },
@@ -377,6 +387,13 @@ export default function CaseDetail() {
             <div className="text-[11px] font-mono break-all">SHA-256 Checksum: {caseItem.closureRecord.decreeHash}</div>
           </div>
         </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 0: OFFICIAL MASTER CASE DOCUMENT FORMAT (TOTAL CASE INFO)             */}
+      {/* ========================================================================= */}
+      {activeTab === 'official-document' && (
+        <OfficialCaseDocument caseItem={caseItem} />
       )}
 
       {/* ========================================================================= */}
