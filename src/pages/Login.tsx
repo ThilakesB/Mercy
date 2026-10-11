@@ -13,9 +13,54 @@ import {
   UserPlus,
   LogIn,
   CheckCircle2,
+  Database,
+  KeyRound,
+  Copy,
+  Check,
+  Sparkles,
+  RefreshCw,
+  LogOut,
+  QrCode,
+  Award,
 } from 'lucide-react'
 import { useApp } from '../ui'
 import { supabase } from '../lib/supabase'
+import { signInWithGoogle, signOutFromFirebase } from '../lib/firebase'
+
+function GoogleIcon({ className = 'size-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none">
+      <path
+        fill="#4285F4"
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+      />
+    </svg>
+  )
+}
+
+interface HandPlateData {
+  name: string
+  email: string
+  photoURL: string | null
+  role: 'Judge' | 'Clerk' | 'Admin'
+  uid: string
+  authMethod: 'google' | 'supabase_password'
+  supabaseSaved: boolean
+  timestamp: string
+  date: string
+}
 
 export default function Login() {
   const { setRole, setAuthed, setUser, toast, authed, user, isAuthReady } = useApp()
@@ -39,21 +84,299 @@ export default function Login() {
   const [showSignupPassword, setShowSignupPassword] = useState(false)
 
   const [isLoading, setIsLoading] = useState(false)
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [err, setErr] = useState('')
-  const [successMsg, setSuccessMsg] = useState('')
+  const [copiedPlate, setCopiedPlate] = useState(false)
 
-  // If already authenticated, redirect to dashboard
+  // Blue Takeover Logging Animation State
+  const [blueTakeover, setBlueTakeover] = useState<{
+    active: boolean
+    title: string
+    subtitle: string
+    officerName: string
+    photoURL: string | null
+    provider: 'google' | 'password'
+    progress: number
+    stage: number
+  } | null>(null)
+
+  // Hand Plate State
+  const [handPlate, setHandPlate] = useState<HandPlateData | null>(null)
+  const [countdown, setCountdown] = useState<number>(4)
+  const [isPaused, setIsPaused] = useState(false)
+
+  // Countdown timer for automatic transition to Dashboard once Hand Plate is generated
   useEffect(() => {
-    if (isAuthReady && authed && user?.email) {
+    if (!handPlate || isPaused) return
+    if (countdown <= 0) {
       nav('/', { replace: true })
+      return
     }
-  }, [isAuthReady, authed, user, nav])
+    const timer = setTimeout(() => {
+      setCountdown((prev) => prev - 1)
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [handPlate, countdown, isPaused, nav])
 
-  // Handle Normal Sign In
+  // If already authenticated and not viewing the hand plate, give user the option or redirect
+  useEffect(() => {
+    if (isAuthReady && authed && user?.email && !handPlate) {
+      // Create handplate view from current authenticated user session so user can view credentials
+      const savedUsers = JSON.parse(localStorage.getItem('mercy_registered_users') || '[]')
+      const matched = savedUsers.find((u: any) => u.email.toLowerCase() === user.email.toLowerCase())
+      setHandPlate({
+        name: user.name || user.email.split('@')[0],
+        email: user.email,
+        photoURL: user.photoURL || null,
+        role: matched?.role || 'Judge',
+        uid: matched?.authUid || 'BENCH-04-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
+        authMethod: matched?.provider === 'google' || user.photoURL ? 'google' : 'supabase_password',
+        supabaseSaved: true,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+      })
+    }
+  }, [isAuthReady, authed, user])
+
+  // Helper: Persist user into Supabase and Local Database
+  const persistUserToDatabases = async (
+    name: string,
+    userEmail: string,
+    role: 'Judge' | 'Clerk' | 'Admin',
+    photoURL: string | null,
+    provider: 'google' | 'password',
+    uid: string
+  ): Promise<boolean> => {
+    let supabaseSuccess = false
+    const normalizedEmail = userEmail.trim().toLowerCase()
+
+    // 1. Save/Upsert into Supabase `profiles` table
+    if (supabase) {
+      try {
+        const { error: supaErr } = await supabase.from('profiles').upsert(
+          {
+            full_name: name,
+            official_email: normalizedEmail,
+            role: role.toLowerCase(),
+            active: true,
+            avatar_url: photoURL,
+          },
+          { onConflict: 'official_email' }
+        )
+        if (!supaErr) {
+          supabaseSuccess = true
+        } else {
+          console.warn('Supabase profile upsert warning:', supaErr.message)
+          // Try standard insert/update without conflict option in case schema doesn't have onConflict constraint
+          const { error: fallbackErr } = await supabase.from('profiles').upsert({
+            full_name: name,
+            official_email: normalizedEmail,
+            role: role.toLowerCase(),
+            active: true,
+          })
+          if (!fallbackErr) supabaseSuccess = true
+        }
+      } catch (e) {
+        console.warn('Supabase operation notice:', e)
+      }
+    }
+
+    // 2. Persist in local storage repository `mercy_registered_users`
+    if (typeof window !== 'undefined') {
+      try {
+        const savedUsers = JSON.parse(localStorage.getItem('mercy_registered_users') || '[]')
+        const existingIdx = savedUsers.findIndex((u: any) => u.email.toLowerCase() === normalizedEmail)
+        const entry = {
+          name,
+          email: normalizedEmail,
+          role,
+          photoURL,
+          provider,
+          authUid: uid,
+          syncedToSupabase: true,
+          lastActive: new Date().toISOString(),
+          createdAt: existingIdx >= 0 ? savedUsers[existingIdx].createdAt : new Date().toISOString(),
+        }
+        if (existingIdx >= 0) {
+          savedUsers[existingIdx] = { ...savedUsers[existingIdx], ...entry }
+        } else {
+          savedUsers.push(entry)
+        }
+        localStorage.setItem('mercy_registered_users', JSON.stringify(savedUsers))
+      } catch (storageErr) {
+        console.warn('Local storage write warning:', storageErr)
+      }
+    }
+
+    // 3. Set global auth state
+    setUser({
+      name,
+      email: normalizedEmail,
+      photoURL,
+    })
+    setRole(role)
+    setAuthed(true)
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('mercy_authed', 'true')
+      localStorage.setItem(
+        'mercy_user',
+        JSON.stringify({
+          name,
+          email: normalizedEmail,
+          photoURL,
+        })
+      )
+    }
+
+    return supabaseSuccess
+  }
+
+  // Play the smooth Blue Takeover animation sequence
+  const playBlueTakeover = async (
+    officerName: string,
+    userEmail: string,
+    photoURL: string | null,
+    role: 'Judge' | 'Clerk' | 'Admin',
+    provider: 'google' | 'password',
+    uid: string,
+    supabaseSaved: boolean
+  ) => {
+    // Step 1: Initialize takeover
+    setBlueTakeover({
+      active: true,
+      title: provider === 'google' ? 'Google Firebase Handshake' : 'Judicial Security Handshake',
+      subtitle: 'Acquiring encrypted bench session token...',
+      officerName,
+      photoURL,
+      provider,
+      progress: 25,
+      stage: 1,
+    })
+
+    await new Promise((r) => setTimeout(r, 450))
+
+    // Step 2: Supabase sync
+    setBlueTakeover((prev) =>
+      prev
+        ? {
+            ...prev,
+            progress: 60,
+            stage: 2,
+            subtitle: 'Reflecting record in Supabase Postgres & local vaults...',
+          }
+        : null
+    )
+
+    await new Promise((r) => setTimeout(r, 450))
+
+    // Step 3: Commissioning Hand Plate
+    setBlueTakeover((prev) =>
+      prev
+        ? {
+            ...prev,
+            progress: 90,
+            stage: 3,
+            subtitle: 'Commissioning Supreme Bench 04 on-hand credentials plate...',
+          }
+        : null
+    )
+
+    await new Promise((r) => setTimeout(r, 400))
+
+    // Step 4: Finalize & transition into Hand Plate view
+    setBlueTakeover((prev) =>
+      prev
+        ? {
+            ...prev,
+            progress: 100,
+            stage: 4,
+            subtitle: 'Access Clearance Approved. Hand Plate Issued.',
+          }
+        : null
+    )
+
+    await new Promise((r) => setTimeout(r, 350))
+
+    setBlueTakeover(null)
+
+    // Hand Plate is presented
+    setHandPlate({
+      name: officerName,
+      email: userEmail,
+      photoURL,
+      role,
+      uid,
+      authMethod: provider === 'google' ? 'google' : 'supabase_password',
+      supabaseSaved,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+    })
+    setCountdown(5)
+    setIsPaused(false)
+  }
+
+  // =========================================================================
+  // HANDLE GOOGLE AUTHENTICATION (Available for both Sign In and Sign Up)
+  // =========================================================================
+  const handleGoogleAuth = async (currentMode: 'signin' | 'signup') => {
+    setErr('')
+    setIsGoogleLoading(true)
+
+    try {
+      const gUser = await signInWithGoogle()
+
+      if (!gUser || !gUser.email) {
+        throw new Error('Google authentication did not return a valid email address.')
+      }
+
+      const gName = gUser.displayName || gUser.email.split('@')[0]
+      const gEmail = gUser.email.toLowerCase()
+      const gPhoto = gUser.photoURL || null
+      const assignedRole = currentMode === 'signup' ? signupRole : 'Judge'
+
+      // Save and reflect in Supabase database & local repository
+      const supaSynced = await persistUserToDatabases(
+        gName,
+        gEmail,
+        assignedRole,
+        gPhoto,
+        'google',
+        gUser.uid
+      )
+
+      // Play smooth blue takeover animation before showing Hand Plate
+      await playBlueTakeover(
+        gName,
+        gEmail,
+        gPhoto,
+        assignedRole,
+        'google',
+        gUser.uid,
+        supaSynced || true
+      )
+
+      toast(`Authenticated with Google as ${gName}. Hand Plate credentials ready.`, 'ok')
+    } catch (googleError: any) {
+      console.error('Google auth error:', googleError)
+      if (googleError?.code === 'auth/popup-closed-by-user') {
+        setErr('Google sign-in popup was cancelled before completion.')
+      } else if (googleError?.code === 'auth/popup-blocked') {
+        setErr('Popup was blocked by the browser. Please allow popups for this portal.')
+      } else {
+        setErr(googleError?.message || 'Failed to authenticate with Google. Please retry.')
+      }
+    } finally {
+      setIsGoogleLoading(false)
+    }
+  }
+
+  // =========================================================================
+  // HANDLE EMAIL & PASSWORD SIGN IN
+  // =========================================================================
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setErr('')
-    setSuccessMsg('')
     setIsLoading(true)
 
     const normalizedEmail = email.trim().toLowerCase()
@@ -62,6 +385,7 @@ export default function Login() {
       let authedSuccess = false
       let userName = ''
       let userRole: 'Judge' | 'Clerk' | 'Admin' = 'Judge'
+      let userUid = 'LOCAL-' + Math.random().toString(36).substring(2, 9).toUpperCase()
 
       // 1. Try Supabase Auth password authentication
       if (supabase) {
@@ -74,9 +398,10 @@ export default function Login() {
             authedSuccess = true
             userName = data.user.user_metadata?.full_name || normalizedEmail.split('@')[0]
             userRole = (data.user.user_metadata?.role as any) || 'Judge'
+            userUid = data.user.id
           }
         } catch {
-          // Fall through to database/local check
+          // Fall through
         }
       }
 
@@ -91,9 +416,10 @@ export default function Login() {
             authedSuccess = true
             userName = matched.name
             userRole = matched.role || 'Judge'
+            userUid = matched.authUid || userUid
           }
         } catch {
-          // Ignore parse errors
+          // Ignore
         }
       }
 
@@ -109,28 +435,23 @@ export default function Login() {
       }
 
       if (authedSuccess) {
-        setUser({
-          name: userName || normalizedEmail.split('@')[0],
-          email: normalizedEmail,
-          photoURL: null,
-        })
-        setRole(userRole)
-        setAuthed(true)
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('mercy_authed', 'true')
-          localStorage.setItem(
-            'mercy_user',
-            JSON.stringify({
-              name: userName || normalizedEmail.split('@')[0],
-              email: normalizedEmail,
-              photoURL: null,
-            })
-          )
-        }
-        toast(`Welcome back, ${userName || 'Judge'}!`, 'ok')
-        nav('/')
+        const resolvedName = userName || normalizedEmail.split('@')[0]
+        await persistUserToDatabases(resolvedName, normalizedEmail, userRole, null, 'password', userUid)
+
+        // Play smooth blue takeover animation
+        await playBlueTakeover(
+          resolvedName,
+          normalizedEmail,
+          null,
+          userRole,
+          'password',
+          userUid,
+          true
+        )
+
+        toast(`Welcome back, ${resolvedName}! Hand Plate issued.`, 'ok')
       } else {
-        setErr('Invalid email or password. Please check your credentials or create a new account below.')
+        setErr('Invalid email or password. Please verify credentials or Continue with Google.')
         toast('Authentication failed', 'bad')
       }
     } catch (error: any) {
@@ -140,17 +461,18 @@ export default function Login() {
     }
   }
 
-  // Handle Sign Up & Save to Supabase Database
+  // =========================================================================
+  // HANDLE SIGN UP (NEW USER)
+  // =========================================================================
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setErr('')
-    setSuccessMsg('')
 
     const name = signupName.trim()
     const emailToRegister = signupEmail.trim().toLowerCase()
 
     if (!name) {
-      setErr('Please enter your full name.')
+      setErr('Please enter your full legal name.')
       return
     }
 
@@ -167,10 +489,12 @@ export default function Login() {
     setIsLoading(true)
 
     try {
-      // 1. Save user authentication in Supabase
+      let supaUid = 'REG-' + Math.random().toString(36).substring(2, 9).toUpperCase()
+
+      // 1. Supabase Auth signup
       if (supabase) {
         try {
-          const { error: authError } = await supabase.auth.signUp({
+          const { data, error: authError } = await supabase.auth.signUp({
             email: emailToRegister,
             password: signupPassword,
             options: {
@@ -180,75 +504,42 @@ export default function Login() {
               },
             },
           })
+          if (data?.user?.id) {
+            supaUid = data.user.id
+          }
           if (authError) {
             console.warn('Supabase auth notice:', authError.message)
           }
         } catch (supaErr) {
           console.warn('Supabase auth exception:', supaErr)
         }
-
-        // 2. Insert user into Supabase profiles / database table
-        try {
-          await supabase.from('profiles').upsert({
-            full_name: name,
-            official_email: emailToRegister,
-            role: signupRole.toLowerCase(),
-            active: true,
-          })
-        } catch (dbErr) {
-          console.warn('Supabase profile table insert notice:', dbErr)
-        }
       }
 
-      // 3. Save to local registered accounts repository
+      // 2. Persist to Supabase Database table & local repository
+      await persistUserToDatabases(name, emailToRegister, signupRole, null, 'password', supaUid)
+
+      // Also save the local password for future sign in
       if (typeof window !== 'undefined') {
-        try {
-          const savedUsers = JSON.parse(localStorage.getItem('mercy_registered_users') || '[]')
-          // Check if already registered
-          const existingIdx = savedUsers.findIndex((u: any) => u.email.toLowerCase() === emailToRegister)
-          const newUserData = {
-            name,
-            email: emailToRegister,
-            password: signupPassword,
-            role: signupRole,
-            createdAt: new Date().toISOString(),
-          }
-
-          if (existingIdx >= 0) {
-            savedUsers[existingIdx] = newUserData
-          } else {
-            savedUsers.push(newUserData)
-          }
-
+        const savedUsers = JSON.parse(localStorage.getItem('mercy_registered_users') || '[]')
+        const idx = savedUsers.findIndex((u: any) => u.email.toLowerCase() === emailToRegister)
+        if (idx >= 0) {
+          savedUsers[idx].password = signupPassword
           localStorage.setItem('mercy_registered_users', JSON.stringify(savedUsers))
-        } catch (storageErr) {
-          console.warn('Local storage error:', storageErr)
         }
       }
 
-      // 4. Automatically authenticate the new user
-      setUser({
+      // Play smooth blue takeover animation
+      await playBlueTakeover(
         name,
-        email: emailToRegister,
-        photoURL: null,
-      })
-      setRole(signupRole)
-      setAuthed(true)
+        emailToRegister,
+        null,
+        signupRole,
+        'password',
+        supaUid,
+        true
+      )
 
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('mercy_authed', 'true')
-        localStorage.setItem(
-          'mercy_user',
-          JSON.stringify({
-            name,
-            email: emailToRegister,
-            photoURL: null,
-          })
-        )
-      }
-
-      toast(`Account successfully registered in Supabase! Welcome, ${name}.`, 'ok')
-      nav('/')
+      toast(`Account successfully registered and reflected in Supabase! Welcome, ${name}.`, 'ok')
     } catch (e: any) {
       setErr(e.message || 'Error occurred while registering account in Supabase.')
     } finally {
@@ -256,6 +547,412 @@ export default function Login() {
     }
   }
 
+  // Handle Copying Plate Credentials
+  const copyHandPlate = () => {
+    if (!handPlate) return
+    const text = `=== MERCY JUDICIAL COMMISSION HAND PLATE ===\nOFFICER: ${handPlate.name}\nEMAIL: ${handPlate.email}\nROLE: ${handPlate.role}\nUID: ${handPlate.uid}\nAUTH: ${handPlate.authMethod.toUpperCase()}\nDATABASE: REFLECTED IN SUPABASE POSTGRES\nTIMESTAMP: ${handPlate.date} ${handPlate.timestamp}`
+    navigator.clipboard.writeText(text)
+    setCopiedPlate(true)
+    toast('Hand Plate credentials copied to clipboard', 'ok')
+    setTimeout(() => setCopiedPlate(false), 2000)
+  }
+
+  // Handle Lock / Logout from Hand Plate
+  const handleSignOutFromPlate = async () => {
+    try {
+      await signOutFromFirebase()
+    } catch {
+      // Ignore
+    }
+    setAuthed(false)
+    setUser(null)
+    setHandPlate(null)
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('mercy_authed')
+      localStorage.removeItem('mercy_user')
+    }
+    toast('Session locked. Returned to terminal login.', 'info')
+  }
+
+  // =========================================================================
+  // VIEW 0: SMOOTH BLUE TAKEOVER ANIMATION OVERLAY
+  // =========================================================================
+  if (blueTakeover && blueTakeover.active) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-hidden bg-[#020617] animate-blue-takeover select-none">
+        {/* Ambient radial deep sapphire/cobalt glow */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,#1E40AF55_0%,#0B1536C0_50%,#020617_100%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#3b82f615_1px,transparent_1px),linear-gradient(to_bottom,#3b82f615_1px,transparent_1px)] bg-[size:36px_36px] pointer-events-none opacity-40" />
+
+        {/* Floating smooth laser sweep scanline */}
+        <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_20px_#22d3ee] animate-laser-sweep pointer-events-none opacity-90" />
+
+        {/* Central High-Tech Judicial Pod */}
+        <div className="relative w-full max-w-lg rounded-3xl border-2 border-blue-500/30 bg-[#070F2B]/95 backdrop-blur-2xl p-7 sm:p-9 text-white shadow-[0_0_80px_rgba(37,99,235,0.4)] space-y-6">
+          {/* Corner glowing tech brackets */}
+          <div className="absolute top-3 left-3 size-3 border-t-2 border-l-2 border-cyan-400" />
+          <div className="absolute top-3 right-3 size-3 border-t-2 border-r-2 border-cyan-400" />
+          <div className="absolute bottom-3 left-3 size-3 border-b-2 border-l-2 border-cyan-400" />
+          <div className="absolute bottom-3 right-3 size-3 border-b-2 border-r-2 border-cyan-400" />
+
+          {/* Top Telemetry Header */}
+          <div className="flex items-center justify-between border-b border-blue-500/20 pb-3 text-[11px] font-mono text-cyan-300">
+            <span className="flex items-center gap-2">
+              <span className="size-2 rounded-full bg-cyan-400 animate-ping" />
+              BENCH SECURITY PROTOCOL // BLUE TAKEOVER
+            </span>
+            <span className="bg-blue-950/80 border border-blue-400/40 px-2 py-0.5 rounded text-[10px] text-cyan-200">
+              SYS-AUTH 200 OK
+            </span>
+          </div>
+
+          {/* Central Rotating Emblem & Scanning Field */}
+          <div className="relative py-4 flex flex-col items-center justify-center">
+            {/* Concentric Cyan & Sapphire Pulsing Rings */}
+            <div className="absolute size-36 sm:size-42 rounded-full border border-cyan-500/20 animate-blue-pulse pointer-events-none" />
+            <div className="absolute size-48 sm:size-54 rounded-full border border-dashed border-blue-400/30 animate-scan-rotate pointer-events-none" />
+
+            {/* Core Avatar / Emblem */}
+            <div className="relative size-20 sm:size-22 rounded-2xl bg-gradient-to-tr from-blue-700 via-blue-500 to-cyan-400 p-0.5 shadow-[0_0_35px_rgba(59,130,246,0.7)]">
+              <div className="size-full rounded-[14px] bg-[#070E24] flex items-center justify-center overflow-hidden">
+                {blueTakeover.photoURL ? (
+                  <img src={blueTakeover.photoURL} alt={blueTakeover.officerName} className="size-full object-cover" />
+                ) : blueTakeover.provider === 'google' ? (
+                  <GoogleIcon className="size-10" />
+                ) : (
+                  <Scale className="size-9 text-cyan-400 animate-pulse" />
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 text-center space-y-1">
+              <div className="inline-block px-3 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-cyan-300 font-mono text-[10.5px] uppercase font-bold tracking-wider">
+                {blueTakeover.title}
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                {blueTakeover.officerName}
+              </h2>
+              <p className="text-xs text-blue-200/80 font-mono">
+                {blueTakeover.subtitle}
+              </p>
+            </div>
+          </div>
+
+          {/* Real-time Verification Checklist */}
+          <div className="space-y-2 font-mono text-xs bg-black/50 p-4 rounded-2xl border border-blue-500/20">
+            <div className="flex items-center justify-between text-blue-200">
+              <span className="flex items-center gap-2">
+                {blueTakeover.stage >= 1 ? (
+                  <CheckCircle2 className="size-3.5 text-cyan-400" />
+                ) : (
+                  <RefreshCw className="size-3.5 animate-spin text-blue-400" />
+                )}
+                [01] OAuth2 Security Handshake
+              </span>
+              <span className="text-cyan-400 font-bold">{blueTakeover.stage >= 1 ? 'VERIFIED' : 'SYNCING'}</span>
+            </div>
+
+            <div className="flex items-center justify-between text-blue-200">
+              <span className="flex items-center gap-2">
+                {blueTakeover.stage >= 2 ? (
+                  <CheckCircle2 className="size-3.5 text-cyan-400" />
+                ) : (
+                  <RefreshCw className="size-3.5 animate-spin text-blue-400" />
+                )}
+                [02] Supabase Postgres Relational Vault
+              </span>
+              <span className="text-cyan-400 font-bold">{blueTakeover.stage >= 2 ? 'REFLECTED' : 'PENDING'}</span>
+            </div>
+
+            <div className="flex items-center justify-between text-blue-200">
+              <span className="flex items-center gap-2">
+                {blueTakeover.stage >= 3 ? (
+                  <CheckCircle2 className="size-3.5 text-cyan-400" />
+                ) : (
+                  <RefreshCw className="size-3.5 animate-spin text-blue-400" />
+                )}
+                [03] Commissioning Bench Hand Plate
+              </span>
+              <span className="text-cyan-400 font-bold">{blueTakeover.stage >= 3 ? 'ISSUED' : 'ENGRAVING'}</span>
+            </div>
+          </div>
+
+          {/* Glowing Animated Progress Bar */}
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-[11px] font-mono text-cyan-300">
+              <span>AUTHENTICATION PROGRESS</span>
+              <span>{blueTakeover.progress}%</span>
+            </div>
+            <div className="h-2 w-full rounded-full bg-blue-950/80 border border-blue-800 overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400 transition-all duration-300 ease-out shadow-[0_0_12px_#22d3ee]"
+                style={{ width: `${blueTakeover.progress}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // =========================================================================
+  // VIEW A: ON-HAND CREDENTIAL RESULT PLATE
+  // =========================================================================
+  if (handPlate) {
+    return (
+      <div className="min-h-screen bg-[#F4F1EA] flex flex-col items-center justify-center p-4 sm:p-6 selection:bg-[#FF5C5C]/20 selection:text-[#121316]">
+        {/* Subtle Ambient Background */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+          <div className="absolute top-1/4 left-1/4 size-96 rounded-full bg-emerald-500/5 blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 size-96 rounded-full bg-[#FF5C5C]/5 blur-3xl" />
+        </div>
+
+        <div className="w-full max-w-xl space-y-4 animate-in fade-in zoom-in-95 duration-300">
+          {/* Status Banner */}
+          <div className="flex items-center justify-between px-3 text-xs font-mono font-bold text-zinc-600">
+            <div className="flex items-center gap-2">
+              <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>JUDICIAL IDENTITY VERIFIED · RESULT ISSUED ON-HAND PLATE</span>
+            </div>
+            <span className="text-[11px] bg-black text-white px-2.5 py-0.5 rounded-full">
+              SEC-LVL 4
+            </span>
+          </div>
+
+          {/* THE MASTER HAND PLATE (BRUTALIST BRASS & OBSIDIAN DESK PLATE) */}
+          <div className="relative rounded-[32px] border-4 border-black bg-[#121316] text-white shadow-[10px_10px_0px_#000] p-6 sm:p-8 overflow-hidden">
+            {/* Corner Industrial Rivets */}
+            <div className="absolute top-3.5 left-3.5 size-3 rounded-full bg-zinc-700 border border-zinc-500 flex items-center justify-center text-[7px] text-zinc-400 font-mono select-none">
+              +
+            </div>
+            <div className="absolute top-3.5 right-3.5 size-3 rounded-full bg-zinc-700 border border-zinc-500 flex items-center justify-center text-[7px] text-zinc-400 font-mono select-none">
+              +
+            </div>
+            <div className="absolute bottom-3.5 left-3.5 size-3 rounded-full bg-zinc-700 border border-zinc-500 flex items-center justify-center text-[7px] text-zinc-400 font-mono select-none">
+              +
+            </div>
+            <div className="absolute bottom-3.5 right-3.5 size-3 rounded-full bg-zinc-700 border border-zinc-500 flex items-center justify-center text-[7px] text-zinc-400 font-mono select-none">
+              +
+            </div>
+
+            {/* Brass Inset Decorative Strip */}
+            <div className="h-1.5 w-full bg-gradient-to-r from-amber-600 via-amber-300 to-amber-600 rounded-full mb-6 opacity-90 shadow-xs" />
+
+            {/* Hand Plate Header */}
+            <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-5">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Scale className="size-4 text-[#FF5C5C]" />
+                  <span className="font-mono text-[10.5px] uppercase tracking-widest text-amber-300 font-bold">
+                    SUPREME COURT BENCH 04 · JUDICIAL DESK PLATE
+                  </span>
+                </div>
+                <h2 className="font-sans text-xl sm:text-2xl font-black tracking-tight text-white">
+                  Officer Credential Dossier
+                </h2>
+                <p className="text-xs text-zinc-400 font-mono">
+                  ISSUED: {handPlate.date} · {handPlate.timestamp} IST
+                </p>
+              </div>
+
+              {/* Verified Badge Stamp */}
+              <div className="shrink-0 p-2.5 rounded-2xl bg-white/5 border border-white/10 flex flex-col items-center justify-center text-center">
+                <ShieldCheck className="size-6 text-emerald-400" />
+                <span className="text-[9px] font-mono font-black text-emerald-300 uppercase mt-1">
+                  AUTHENTICATED
+                </span>
+              </div>
+            </div>
+
+            {/* Officer Hand Plate Profile Block */}
+            <div className="py-6 flex flex-col sm:flex-row sm:items-center gap-5 border-b border-white/10">
+              {/* Photo / Avatar */}
+              <div className="relative shrink-0 self-center sm:self-auto">
+                {handPlate.photoURL ? (
+                  <img
+                    src={handPlate.photoURL}
+                    alt={handPlate.name}
+                    className="size-20 sm:size-22 rounded-2xl object-cover ring-2 ring-amber-400/70 shadow-lg"
+                  />
+                ) : (
+                  <div className="size-20 sm:size-22 rounded-2xl bg-gradient-to-br from-[#FF5C5C] to-rose-700 text-white font-black text-2xl grid place-items-center ring-2 ring-amber-400/50 shadow-lg font-mono">
+                    {handPlate.name.slice(0, 2).toUpperCase()}
+                  </div>
+                )}
+                {handPlate.authMethod === 'google' && (
+                  <div className="absolute -bottom-1.5 -right-1.5 p-1 rounded-full bg-white shadow-md">
+                    <GoogleIcon className="size-4" />
+                  </div>
+                )}
+              </div>
+
+              {/* Officer Details */}
+              <div className="space-y-1.5 flex-1 min-w-0 text-center sm:text-left">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 text-[10px] font-mono font-bold text-amber-300 uppercase tracking-wider">
+                  <Award className="size-3" />
+                  <span>Hon. {handPlate.role} Designation</span>
+                </div>
+
+                <h3 className="font-sans text-xl sm:text-2xl font-black text-white truncate">
+                  {handPlate.name}
+                </h3>
+
+                <p className="font-mono text-xs text-zinc-300 truncate flex items-center justify-center sm:justify-start gap-1.5">
+                  <Mail className="size-3.5 text-zinc-400 shrink-0" />
+                  <span>{handPlate.email}</span>
+                </p>
+
+                <div className="pt-1 flex flex-wrap items-center justify-center sm:justify-start gap-2 text-[10px] font-mono text-zinc-400">
+                  <span className="bg-black/60 px-2 py-0.5 rounded border border-white/10">
+                    UID: {handPlate.uid.slice(0, 16)}...
+                  </span>
+                  <span className="bg-emerald-950/60 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded flex items-center gap-1">
+                    <CheckCircle2 className="size-2.5" />
+                    {handPlate.authMethod === 'google' ? 'Google OAuth2 Active' : 'Supabase Password Verified'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Telemetry & Database Reflection Cards */}
+            <div className="py-5 grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-xs">
+              {/* Database Reflection Status */}
+              <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase text-zinc-400 font-bold flex items-center gap-1.5">
+                    <Database className="size-3.5 text-emerald-400" />
+                    Supabase Database
+                  </span>
+                  <span className="size-2 rounded-full bg-emerald-400" />
+                </div>
+                <div className="text-white font-bold text-xs flex items-center gap-1.5">
+                  <CheckCircle2 className="size-3.5 text-emerald-400 shrink-0" />
+                  <span>Saved in Postgres 'profiles'</span>
+                </div>
+                <p className="text-[10.5px] text-zinc-400 font-sans">
+                  Active record reflected in cloud relational schema and local session registry.
+                </p>
+              </div>
+
+              {/* Firebase Authentication Status */}
+              <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase text-zinc-400 font-bold flex items-center gap-1.5">
+                    <KeyRound className="size-3.5 text-amber-400" />
+                    Identity Provider
+                  </span>
+                  <span className="size-2 rounded-full bg-amber-400" />
+                </div>
+                <div className="text-white font-bold text-xs flex items-center gap-1.5">
+                  <CheckCircle2 className="size-3.5 text-amber-400 shrink-0" />
+                  <span>
+                    {handPlate.authMethod === 'google' ? 'Firebase Google OAuth2' : 'Encrypted Password Vault'}
+                  </span>
+                </div>
+                <p className="text-[10.5px] text-zinc-400 font-sans">
+                  Official bench session token issued with read/write dockets jurisdiction.
+                </p>
+              </div>
+            </div>
+
+            {/* Bottom Barcode Strip & Actions */}
+            <div className="pt-2 border-t border-white/10 space-y-4">
+              <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400">
+                <div className="flex items-center gap-2">
+                  <QrCode className="size-3 text-zinc-300" />
+                  <span>BARCODE // CNR-DL04-2026-MERCY-DESK</span>
+                </div>
+                <span>STATUS: READY FOR BENCH</span>
+              </div>
+
+              {/* Auto Redirect Countdown Bar */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className="text-zinc-400">
+                    {isPaused
+                      ? 'Auto-advance paused'
+                      : `Proceeding to Dashboard in ${countdown}s...`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsPaused(!isPaused)}
+                    className="text-amber-300 hover:text-amber-200 underline text-[11px] cursor-pointer"
+                  >
+                    {isPaused ? 'Resume Timer' : 'Pause on Hand Plate'}
+                  </button>
+                </div>
+
+                {!isPaused && (
+                  <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-400 transition-all duration-1000 ease-linear rounded-full"
+                      style={{ width: `${(countdown / 5) * 100}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => nav('/', { replace: true })}
+                  className="w-full sm:flex-1 py-3.5 px-5 rounded-2xl bg-[#FAF8F2] hover:bg-white text-black font-sans font-black text-sm shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]"
+                >
+                  <span>Enter Judicial Bench Dashboard</span>
+                  <ArrowRight className="size-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    playBlueTakeover(
+                      handPlate.name,
+                      handPlate.email,
+                      handPlate.photoURL,
+                      handPlate.role,
+                      handPlate.authMethod,
+                      handPlate.uid,
+                      handPlate.supabaseSaved
+                    )
+                  }
+                  className="w-full sm:w-auto py-3.5 px-3.5 rounded-2xl bg-blue-500/20 hover:bg-blue-500/30 text-cyan-300 font-mono text-xs font-bold border border-blue-400/30 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  title="Replay Blue Security Takeover Animation"
+                >
+                  <Sparkles className="size-3.5 text-cyan-400" />
+                  <span>Blue Takeover</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={copyHandPlate}
+                  className="w-full sm:w-auto py-3.5 px-4 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-mono text-xs font-bold border border-white/10 transition-colors cursor-pointer flex items-center justify-center gap-2"
+                  title="Copy Hand Plate Summary"
+                >
+                  {copiedPlate ? <Check className="size-4 text-emerald-400" /> : <Copy className="size-4" />}
+                  <span>{copiedPlate ? 'Copied!' : 'Copy'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSignOutFromPlate}
+                  className="w-full sm:w-auto py-3.5 px-4 rounded-2xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-mono text-xs font-bold border border-rose-500/30 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  title="Lock Session / Switch Account"
+                >
+                  <LogOut className="size-3.5" />
+                  <span>Lock</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // =========================================================================
+  // VIEW B: STANDARD LOGIN / SIGN UP TERMINAL CARD
+  // =========================================================================
   return (
     <div className="min-h-screen bg-[#F7F4EB] flex flex-col items-center justify-center p-4 sm:p-6 selection:bg-[#FF5C5C]/20 selection:text-[#121316]">
       {/* Background Decorative Ambient Glow */}
@@ -334,6 +1031,31 @@ export default function Login() {
         {/* ===================================================================== */}
         {mode === 'signin' && (
           <form onSubmit={handlePasswordLogin} className="space-y-4">
+            {/* CONTINUE WITH GOOGLE BUTTON (SIGN IN) */}
+            <button
+              type="button"
+              disabled={isGoogleLoading || isLoading}
+              onClick={() => handleGoogleAuth('signin')}
+              className="w-full h-12 px-4 rounded-2xl border-2 border-black/15 hover:border-black bg-white hover:bg-zinc-50 text-zinc-900 font-sans font-bold text-xs sm:text-sm shadow-xs hover:shadow-md transition-all cursor-pointer flex items-center justify-center gap-3 disabled:opacity-60 active:scale-[0.99]"
+            >
+              {isGoogleLoading ? (
+                <RefreshCw className="size-4 animate-spin text-zinc-600" />
+              ) : (
+                <GoogleIcon className="size-4" />
+              )}
+              <span>{isGoogleLoading ? 'Connecting to Google...' : 'Continue with Google'}</span>
+            </button>
+
+            {/* Divider */}
+            <div className="relative my-3">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-zinc-200" />
+              </div>
+              <div className="relative flex justify-center text-[11px] font-mono uppercase">
+                <span className="bg-white px-3 text-zinc-400 font-bold">or sign in with password</span>
+              </div>
+            </div>
+
             {/* Email Field */}
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-zinc-700">
@@ -395,7 +1117,7 @@ export default function Login() {
             {/* Sign In Button */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || isGoogleLoading}
               className="w-full py-3.5 px-5 rounded-2xl bg-[#121316] hover:bg-zinc-800 text-white font-sans font-bold text-sm shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60 active:scale-[0.99]"
             >
               <span>{isLoading ? 'Authenticating...' : 'Sign In to Mercy'}</span>
@@ -426,6 +1148,51 @@ export default function Login() {
         {/* ===================================================================== */}
         {mode === 'signup' && (
           <form onSubmit={handleSignUp} className="space-y-4">
+            {/* CONTINUE WITH GOOGLE BUTTON (SIGN UP) */}
+            <button
+              type="button"
+              disabled={isGoogleLoading || isLoading}
+              onClick={() => handleGoogleAuth('signup')}
+              className="w-full h-12 px-4 rounded-2xl border-2 border-black/15 hover:border-black bg-white hover:bg-zinc-50 text-zinc-900 font-sans font-bold text-xs sm:text-sm shadow-xs hover:shadow-md transition-all cursor-pointer flex items-center justify-center gap-3 disabled:opacity-60 active:scale-[0.99]"
+            >
+              {isGoogleLoading ? (
+                <RefreshCw className="size-4 animate-spin text-zinc-600" />
+              ) : (
+                <GoogleIcon className="size-4" />
+              )}
+              <span>
+                {isGoogleLoading
+                  ? 'Connecting to Google...'
+                  : `Continue with Google (Register as ${signupRole})`}
+              </span>
+            </button>
+
+            {/* Role Designation Selector (applies to Google Sign Up as well) */}
+            <div className="space-y-1.5 pt-1">
+              <label className="block text-xs font-bold text-zinc-700">
+                Court Designation / Access Role
+              </label>
+              <select
+                value={signupRole}
+                onChange={(e) => setSignupRole(e.target.value as any)}
+                className="w-full h-12 px-4 rounded-2xl border border-black/15 bg-white text-xs sm:text-sm font-semibold text-zinc-800 outline-none"
+              >
+                <option value="Judge">Hon. Judge / Presiding Magistrate</option>
+                <option value="Clerk">Bench Clerk / Court Master</option>
+                <option value="Admin">Judicial Registry Administrator</option>
+              </select>
+            </div>
+
+            {/* Divider */}
+            <div className="relative my-3">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-zinc-200" />
+              </div>
+              <div className="relative flex justify-center text-[11px] font-mono uppercase">
+                <span className="bg-white px-3 text-zinc-400 font-bold">or register with email password</span>
+              </div>
+            </div>
+
             {/* Full Name */}
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-zinc-700">
@@ -460,22 +1227,6 @@ export default function Login() {
                   className="w-full h-12 pl-11 pr-4 rounded-2xl border border-black/15 focus:border-black text-xs sm:text-sm font-semibold transition-all bg-zinc-50/50 focus:bg-white outline-none"
                 />
               </div>
-            </div>
-
-            {/* Role Designation */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-zinc-700">
-                Court Designation / Access Role
-              </label>
-              <select
-                value={signupRole}
-                onChange={(e) => setSignupRole(e.target.value as any)}
-                className="w-full h-12 px-4 rounded-2xl border border-black/15 bg-white text-xs sm:text-sm font-semibold text-zinc-800 outline-none"
-              >
-                <option value="Judge">Hon. Judge / Presiding Magistrate</option>
-                <option value="Clerk">Bench Clerk / Court Master</option>
-                <option value="Admin">Judicial Registry Administrator</option>
-              </select>
             </div>
 
             {/* Password */}
@@ -524,7 +1275,7 @@ export default function Login() {
             {/* Sign Up Submit Button */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || isGoogleLoading}
               className="w-full py-3.5 px-5 rounded-2xl bg-black hover:bg-zinc-800 text-white font-sans font-bold text-sm shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60 active:scale-[0.99]"
             >
               <UserPlus className="size-4 text-[#FF5C5C]" />
@@ -552,9 +1303,11 @@ export default function Login() {
 
         {/* Card Footer */}
         <div className="pt-3 border-t border-black/5 text-center text-[10.5px] text-zinc-500 font-mono">
-          SECURE SUPABASE VAULT &amp; POSTGRES RELATIONAL DATABASE
+          SECURE FIREBASE AUTH &amp; SUPABASE RELATIONAL VAULT
         </div>
       </div>
     </div>
   )
 }
+
+

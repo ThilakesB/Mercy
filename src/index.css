@@ -393,3 +393,80 @@ body {
   background-color: #0E2038 !important;
   color: #BFDBFE !important;
 }
+
+/* =========================================================================
+   BLUE TAKEOVER & JUDICIAL TELEMETRY ANIMATIONS
+   ========================================================================= */
+@keyframes blueRadialWipe {
+  0% {
+    clip-path: circle(0% at 50% 50%);
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    clip-path: circle(160% at 50% 50%);
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes laserSweep {
+  0% {
+    top: 0%;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+@keyframes bluePulseRing {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(0.85);
+    opacity: 0.8;
+  }
+}
+
+@keyframes scanHexRotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-blue-takeover {
+  animation: blueRadialWipe 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-laser-sweep {
+  animation: laserSweep 1.8s ease-in-out infinite;
+}
+
+.animate-blue-pulse {
+  animation: bluePulseRing 2.4s ease-in-out infinite;
+}
+
+.animate-scan-rotate {
+  animation: scanHexRotate 12s linear infinite;
+}
+
