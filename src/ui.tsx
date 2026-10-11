@@ -25,8 +25,8 @@ interface Ctx {
   authed: boolean
   setAuthed: (v: boolean) => void
   isAuthReady: boolean
-  theme: 'swiss-light' | 'tactical-dark'
-  setTheme: (t: 'swiss-light' | 'tactical-dark') => void
+  theme: 'swiss-light'
+  setTheme: (t: 'swiss-light') => void
 }
 
 const AppCtx = createContext<Ctx>(null as unknown as Ctx)
@@ -39,13 +39,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<UserProfile | null>(null)
   const [isAuthReady, setIsAuthReady] = useState<boolean>(false)
   const [toasts, setToasts] = useState<Toast[]>([])
-  const [theme, setThemeState] = useState<'swiss-light' | 'tactical-dark'>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('mercy_theme_mode')
-      if (saved === 'tactical-dark' || saved === 'swiss-light') return saved
-    }
-    return 'swiss-light'
-  })
+  const [theme, setThemeState] = useState<'swiss-light'>('swiss-light')
 
   // Real-time Firebase Authentication listener & Strict Email Enforcement
   useEffect(() => {
@@ -128,19 +122,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('mercy_theme_mode', theme)
-      if (theme === 'tactical-dark') {
-        document.documentElement.setAttribute('data-theme', 'tactical-dark')
-        document.documentElement.classList.add('dark')
-      } else {
-        document.documentElement.setAttribute('data-theme', 'swiss-light')
-        document.documentElement.classList.remove('dark')
-      }
+      localStorage.removeItem('mercy_theme_mode')
+      document.documentElement.setAttribute('data-theme', 'swiss-light')
+      document.documentElement.classList.remove('dark')
     }
-  }, [theme])
+  }, [])
 
-  const setTheme = (t: 'swiss-light' | 'tactical-dark') => {
-    setThemeState(t)
+  const setTheme = (_t: 'swiss-light') => {
+    setThemeState('swiss-light')
   }
 
   const toast = useCallback((msg: string, kind: Toast['kind'] = 'ok') => {

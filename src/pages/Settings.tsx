@@ -4,7 +4,6 @@ import {
   Building2,
   Scale,
   Palette,
-  Moon,
   Sun,
   Bell,
   Lock,
@@ -251,56 +250,20 @@ export default function Settings() {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
-          {/* Light Mode */}
-          <button
-            type="button"
-            onClick={() => {
-              setTheme('swiss-light')
-              toast('Switched to Warm Cream theme', 'ok')
-            }}
-            className={`p-4.5 text-left rounded-2xl border transition-all cursor-pointer ${
-              theme === 'swiss-light'
-                ? 'border-black bg-[#F7F4EB] shadow-xs ring-2 ring-black'
-                : 'border-black/[0.08] bg-white hover:bg-zinc-50'
-            }`}
-          >
+        <div className="grid md:grid-cols-1 gap-4">
+          {/* Light Mode Standard */}
+          <div className="p-4.5 text-left rounded-2xl border border-black bg-[#F7F4EB] shadow-xs ring-1 ring-black">
             <div className="flex items-center justify-between mb-1.5">
               <div className="font-extrabold text-sm text-zinc-950 flex items-center gap-2">
                 <Sun className="size-4 text-amber-600" />
-                <span>Warm Cream Bento (Default Light)</span>
+                <span>Warm Cream Bento (Courtroom Light Standard)</span>
               </div>
-              {theme === 'swiss-light' && <CheckCircle2 className="size-4 text-emerald-600" />}
+              <CheckCircle2 className="size-4 text-emerald-600" />
             </div>
             <p className="text-xs text-zinc-600 font-medium leading-relaxed">
-              Clean warm cream background with dark high-contrast navigation and soft pastel cards.
+              Standard judicial visual theme: warm cream background with dark high-contrast navigation and soft pastel cards.
             </p>
-          </button>
-
-          {/* Dark Mode */}
-          <button
-            type="button"
-            onClick={() => {
-              setTheme('tactical-dark')
-              toast('Switched to Tactical Dark theme', 'ok')
-            }}
-            className={`p-4.5 text-left rounded-2xl border transition-all cursor-pointer ${
-              theme === 'tactical-dark'
-                ? 'border-zinc-700 bg-zinc-900 text-white shadow-xs ring-2 ring-zinc-500'
-                : 'border-black/[0.08] bg-white hover:bg-zinc-50'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="font-extrabold text-sm text-zinc-950 dark:text-white flex items-center gap-2">
-                <Moon className="size-4 text-blue-400" />
-                <span>Tactical Dark CRT (Dark Mode)</span>
-              </div>
-              {theme === 'tactical-dark' && <CheckCircle2 className="size-4 text-emerald-400" />}
-            </div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed">
-              Low-emission dark interface designed for evening sessions and minimal eye strain.
-            </p>
-          </button>
+          </div>
         </div>
 
         <div className="grid md:grid-cols-2 gap-4 pt-2">

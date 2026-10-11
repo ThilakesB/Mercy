@@ -23,8 +23,6 @@ import {
   FileCheck,
   Plus,
   Shield,
-  Sun,
-  Moon,
   AlertTriangle,
   User,
   SlidersHorizontal,
@@ -293,8 +291,6 @@ export default function Layout() {
     logout,
     isAuthReady,
     role,
-    theme,
-    setTheme,
   } = useApp()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [alarmsOpen, setAlarmsOpen] = useState(false)
@@ -610,23 +606,6 @@ export default function Layout() {
                 onClose={() => setAlarmsOpen(false)}
               />
             </div>
-
-            {/* Theme Toggle (Bigger) */}
-            <button
-              onClick={() =>
-                setTheme(
-                  theme === "swiss-light" ? "tactical-dark" : "swiss-light",
-                )
-              }
-              className="grid size-12 sm:size-12.5 place-items-center rounded-full bg-white border border-black/10 text-zinc-800 hover:bg-zinc-50 shadow-sm hover:border-black/25 transition-all cursor-pointer"
-              title="Toggle theme"
-            >
-              {theme === "swiss-light" ? (
-                <Moon className="size-5.5 text-zinc-700" />
-              ) : (
-                <Sun className="size-5.5 text-amber-500" />
-              )}
-            </button>
 
             {/* Profile Avatar Pill Button with Google User & Sign Out */}
             <div className="flex items-center gap-2">
